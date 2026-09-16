@@ -59,21 +59,28 @@ Loại: [x] Tối ưu tính năng có sẵn  [ ] Tính năng mới
 - **Non-goals:**
   1. Không tự xác nhận trạng thái nộp bài, không sửa điểm danh, không cấp gia hạn — bot không có quyền truy cập các hệ thống đó.
   2. Không giải đáp nội dung kiến thức bài giảng / chữa bài.
-  3. Không tích hợp bot Discord thật vào server khoá (demo trên giao diện web).
+  3. Không tích hợp bot Discord thật vào server khoá (demo trên giao diện web mô phỏng client Discord).
   4. Không tự đọc email của học viên — nguồn chỉ là tập thông báo chính thức nhóm nạp vào.
-- **Mức prototype nhắm tới:** [ ] Sketch [ ] Mock [x] Working
-  - Thật: lời gọi Gemini qua Google AI Studio, prompt grounding, output JSON (intent · câu trả lời · nguồn · hành động), giao diện chat bấm được.
-  - Mock: kho thông báo chính thức (giả lập theo mẫu thông báo Lab 1, Lab 2, Onboarding); nút `[Chuyển cho TA]` chỉ ghi nhận yêu cầu, chưa gửi cho TA thật.
-- **Automation:** [ ] augment [x] conditional [ ] automate — Tự trả lời ngắn gọn khi nguồn rõ và đủ; hỏi lại khi thiếu tên bài hoặc lớp; báo rõ khi nguồn mâu thuẫn và hướng dẫn chuyển TA. Nói sai một deadline có thể khiến học viên nộp trễ và mất điểm (cost-of-error cao), trong khi chuyển TA chỉ tốn thêm thời gian chờ. Vì vậy chỉ tự trả lời khi tìm được thông báo chính thức khớp; mơ hồ thì hỏi lại; không có căn cứ, mâu thuẫn hoặc ngoài thẩm quyền thì chuyển TA.
-- **§4b. Nguyên tắc đã áp dụng:**
+- **Mức prototype nhắm tới:** [ ] Sketch [x] Mock [ ] Working *(tiến tới Working ở CP3–CP5)*
+  - **Phần chạy THỰC TẾ (Real):**
+    1. Giao diện Web mô phỏng Discord Client (`codebase/mock_ui/index.html`) chạy tương tác thật: hiển thị luồng chat, render các khối embed trích dẫn nguồn, các nút bấm chọn bài tập (chips) và nút chuyển TA.
+    2. Logic định tuyến trạng thái (State Machine): nhận diện đúng 4 trạng thái phản hồi (`answered`, `clarify`, `ta_handoff`, `rejected`) và render giao diện tương ứng theo JSON Contract.
+    3. Tại CP3 trở đi: Lời gọi AI thật bằng Gemini 1.5 Flash API (Google AI Studio) xử lý phân loại Intent và trích xuất dữ liệu có cấu trúc.
+  - **Phần chạy GIẢ LẬP (Mock):**
+    1. Kho thông báo chính thức (Official Ground Truth): Nạp sẵn tập fixtures thông báo mẫu của BTC (Lab 01 Codelab, Lab 02 CVAT, Onboarding, Quy định nộp bài) vào bộ nhớ / file JSON thay vì cào trực tiếp qua bot token vào server Discord thật (tuân thủ Non-goal 3 & 4).
+    2. Handoff TA: Nút `[🔴 Chuyển cho TA hỗ trợ]` hiển thị Toast thông báo xác nhận và ghi nhận log yêu cầu chuyển TA, chưa gửi webhook trực tiếp tới tài khoản Discord cá nhân của TA thật.
+- **Automation:** [ ] augment [x] conditional [ ] automate — **Lý do theo Cost-of-error:**
+  - Tự trả lời tự động (Automate) chỉ khi thông tin có trong thông báo chính thức và độ tin cậy cao.
+  - Chuyển sang can thiệp của con người / TA (Augment / Handoff) khi thông tin mơ hồ, không có căn cứ, mâu thuẫn hoặc ngoài thẩm quyền.
+  - Nói sai một deadline khiến học viên nộp trễ và bị 0 điểm lab (cost-of-error cực đắt, mất niềm tin vào chương trình), trong khi chuyển TA chỉ tốn thêm một khoảng thời gian chờ đợi ngắn (cost-of-error rẻ hơn rất nhiều). Vì vậy hệ thống bắt buộc phải **"biết mình không biết"** và không bao giờ tự tiện suy đoán.
+- **§4b. Nguyên tắc HAX / PAIR đã áp dụng:**
 
-  | Nguyên tắc | Áp cụ thể vào đâu trong prototype |
-  |---|---|
-  | HAX G1 — Làm rõ hệ thống làm được gì | Lời chào đầu cuộc chat nêu rõ: chỉ trả lời deadline & thủ tục theo thông báo chính thức |
-  | HAX G2 — Làm rõ hệ thống làm tốt đến đâu | Mỗi câu trả lời kèm trích dẫn + link thông báo gốc để học viên tự kiểm |
-  | HAX G10 — Thu hẹp phạm vi khi không chắc | Câu hỏi mơ hồ → hỏi lại 1 câu với các lựa chọn (Lab 1 / Lab 2 / Hackathon) thay vì đoán |
-  | HAX G8 / G9 — Dễ bỏ qua, dễ sửa | Nút `[Chuyển cho TA]` luôn hiện; học viên chọn lại bài nếu bot hiểu sai |
-  | PAIR — Errors & graceful failure | Không có căn cứ → nói rõ "chưa có thông báo chính thức" và chuyển TA, không bịa |
+  | Nguyên tắc | Mục đích | Vị trí áp dụng cụ thể trong bản mẫu (`codebase/mock_ui/`) |
+  |---|---|---|
+  | **HAX G1** — Làm rõ hệ thống làm được gì | Đặt kỳ vọng đúng ngay từ đầu, tránh học viên hỏi lan man | **Tin nhắn chào mừng cố định** của Bot ngay đầu khung chat: Nêu rõ chỉ hỗ trợ tra cứu hạn nộp lab, quy chế nộp bài và thủ tục chính thức của K4. |
+  | **HAX G2** — Làm rõ hệ thống làm tốt đến đâu | Giúp học viên tự kiểm chứng căn cứ, tăng độ tin cậy | **Khối Embed màu xám viền tím** nằm ngay dưới câu trả lời của Bot: Trích dẫn nguyên văn câu thông báo + Tên kênh `#thong-bao-chung` + Mã tin nhắn nguồn (`M49744`). |
+  | **HAX G10** — Thu hẹp phạm vi khi không chắc | Không đoán mò khi câu hỏi thiếu thực thể (Entity) | **Thanh nút bấm gợi ý (Clarification Chips)**: Khi nhận câu hỏi cộc lốc *"Hạn nộp bài là mấy giờ?"*, bot hỏi lại 1 câu và hiển thị 3 nút chọn nhanh `[🔘 Lab 01]` `[🔘 Lab 02]` `[🔘 Ghép đội]`. |
+  | **HAX G11 / PAIR Graceful Failure** — Giải thích lý do từ chối & chuyển giao an toàn | Giải thích rõ vì sao không làm được và chỉ đường lui cho người dùng | **Nút bấm hành động màu đỏ / tím**: Với case ngoài quyền (case M84993), bot giải thích lý do bảo mật và chỉ dẫn lệnh `/ticket create`; với case chưa công bố (Lab 4), bot hiện nút `[🔴 Chuyển cho TA hỗ trợ]`. |
 
 ## §5. Kiểu lỗi — 4 lớp chỗ khó + kịch bản (≥8)
 
@@ -96,12 +103,41 @@ Loại: [x] Tối ưu tính năng có sẵn  [ ] Tính năng mới
 
 ## §6. Bốn đường đi của trải nghiệm
 
-- **Happy path:** "Hạn nộp Lab 2 là khi nào?" → trả lời ≤3 câu, ghi giờ + trích dẫn thông báo + link nguồn.
-- **Low-confidence (②):** câu hỏi không rõ bài nào → hỏi lại 1 câu kèm nút chọn nhanh.
-- **Failure / không căn cứ (①):** không tìm thấy thông báo khớp → "Chưa có thông báo chính thức về việc này" + nút `[Chuyển cho TA]`.
-- **Correction (user sửa):** học viên bấm "Không phải bài này" hoặc chọn lại bài → bot trả lời lại theo bài đã chọn.
-- **Khi bị đòi ngoài phạm vi (③):** từ chối lịch sự, nói rõ bot không có quyền, hướng dẫn mở ticket / chuyển TA.
-- **Case đặc thù domain (④):** hai nguồn lệch giờ → nêu cả hai nguồn, cảnh báo mâu thuẫn, gắn `@TA` xác nhận.
+Bản prototype thể hiện rõ nét 4 đường đi tương tác của người dùng (kèm 2 nhánh mở rộng xử lý lỗi domain):
+
+1. **Đường 1 — Happy Path (Có căn cứ chính thức):**
+   - *Tình huống:* Học viên hỏi câu hỏi cụ thể, dữ liệu đã có trong thông báo ghim.
+   - *Ví dụ:* Học viên hỏi: *"Hạn nộp Lab 2 CVAT là khi nào vậy bot?"*
+   - *Phản hồi của Bot:* Trả lời ngắn gọn $\le$ 3 câu: *"Hạn nộp bài tập Lab 02 (CVAT) là 23:59 ngày 16/09/2026 trên hệ thống VLearn."* Kèm theo khối Embed dẫn nguồn chính thức từ kênh `#thong-bao-chung` ([Tin nhắn M49744]).
+   - *Hành động tiếp theo:* Học viên nắm chắc deadline, an tâm hoàn thành bài đúng hạn.
+
+2. **Đường 2 — Low-confidence / Ambiguity (Mơ hồ / Thiếu thông tin — Lớp ②):**
+   - *Tình huống:* Học viên hỏi cộc lốc hoặc thiếu tên bài tập/lab cần tra cứu.
+   - *Ví dụ:* Học viên hỏi: *"Hạn nộp bài là mấy giờ vậy ạ?"*
+   - *Phản hồi của Bot:* Áp dụng nguyên tắc **HAX G10**, bot không tự ý đoán một bài bất kỳ mà phản hồi một câu ngắn: *"Câu hỏi của bạn chưa nêu rõ tên bài cần tra cứu. Bạn muốn tra cứu hạn nộp của nội dung nào?"* Đồng thời render các nút bấm chọn nhanh (Clarification Chips): `[🔘 Lab 01 Codelab]` `[🔘 Lab 02 CVAT]` `[🔘 Ghép đội tự do]`.
+   - *Hành động tiếp theo:* Học viên bấm vào nút lựa chọn bài tương ứng → Hệ thống tự động kích hoạt câu trả lời chuẩn xác theo **Đường 1**.
+
+3. **Đường 3 — Failure / No Ground Truth (Chưa công bố / Không có nguồn — Lớp ①):**
+   - *Tình huống:* Học viên hỏi thông tin về các lab chưa được Ban tổ chức công bố lịch trình (ví dụ Lab 4).
+   - *Ví dụ:* Học viên hỏi: *"Hạn nộp bài Lab 4 là ngày nào?"*
+   - *Phản hồi của Bot:* Bot kiểm tra kho thông báo không có kết quả. Thay vì bịa đặt một mốc thời gian (Hallucination), bot phản hồi trung thực: *"Hiện tại Ban tổ chức chưa công bố thời hạn chính thức cho Lab 4. Để tránh bạn nhận thông tin suy đoán sai lệch, bot không tự đưa ra deadline."* Kèm nút bấm nổi bật: `[🔴 Chuyển cho TA hỗ trợ]`.
+   - *Hành động tiếp theo:* Học viên click vào nút `[Chuyển cho TA hỗ trợ]`, bot lập tức kích hoạt Toast xác nhận: *"Đã tạo thread hỗ trợ và gắn thẻ @TA_OnDuty kèm câu hỏi của bạn. TA sẽ phản hồi sớm nhất!"*.
+
+4. **Đường 4 — Correction (Người dùng sửa / Chọn lại):**
+   - *Tình huống:* Học viên nhận thấy bot hiểu nhầm bài hoặc muốn tra cứu bài khác ngay sau đó.
+   - *Ví dụ:* Sau khi xem thông tin Lab 1, học viên gõ: *"Không, mình muốn hỏi Lab 2 cơ"* hoặc bấm lại nút chọn `[🔘 Lab 02 CVAT]`.
+   - *Phản hồi của Bot:* Bot ghi nhận thực thể mới, lập tức cập nhật câu trả lời về hạn nộp của Lab 2 mà không bắt học viên phải gõ lại từ đầu.
+
+5. **Đường 5 — Out of Scope (Ngoài thẩm quyền can thiệp — Lớp ③):**
+   - *Tình huống:* Học viên nhờ việc liên quan đến dữ liệu cá nhân hoặc thẩm quyền quyết định của BTC (khắc phục lỗi thật ở case `M84993` và `M75012`).
+   - *Ví dụ:* Học viên hỏi: *"Check xem t đã nộp bài codelab chưa"* hoặc *"Cho em xin nộp muộn 30 phút nhé"*.
+   - *Phản hồi của Bot:* Áp dụng nguyên tắc **HAX G11**, bot từ chối lịch sự và giải thích rõ ràng: *"Trợ lý không có quyền truy cập dữ liệu cá nhân của học viên để xác nhận bài nộp hoặc cấp quyền gia hạn."* Đồng thời hướng dẫn rõ ràng:
+     - Để xem trạng thái bài nộp cá nhân: Truy cập cổng VLearn > Lớp học của tôi.
+     - Để xin gia hạn/hỗ trợ đặc biệt: Sử dụng lệnh `/ticket create` tại kênh `#ticket-support`.
+
+6. **Đường 6 — Domain Conflict (Phát hiện xung đột thông báo — Lớp ④ Đặc thù):**
+   - *Tình huống:* Hai kênh thông báo đưa ra hai mốc giờ lệch nhau (ví dụ: Email báo 23:59 nhưng Discord ghim 18:00).
+   - *Phản hồi của Bot:* Cảnh báo học viên có sự mâu thuẫn giữa 2 nguồn tin, đưa ra lời khuyên an toàn (nên nộp theo mốc sớm hơn trong lúc chờ đính chính) và tự động gắn cờ ưu tiên gửi tới `@TA` để ban tổ chức kiểm tra ngay.
 
 ## §7. Kiểm thử
 
