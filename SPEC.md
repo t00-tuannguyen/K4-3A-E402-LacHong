@@ -125,10 +125,12 @@ Loại: [x] Tối ưu tính năng có sẵn  [ ] Tính năng mới
   - Prompt: **Vũ Duy Điệp** (system prompt, grounding, phát hiện mâu thuẫn, JSON output)
   - Code: **Vũ Duy Điệp** (backend gọi AI) · **Võ Phú Hãn** (giao diện chat)
   - Demo: **Võ Phú Hãn** (video 30s CP3, video dự phòng CP5, slide) · **Nguyễn Tiến Tuân** (tổng hợp slide PDF)
-- **Willing users (≥2 tên) + kế hoạch vòng validation:**
-  1. ____ — MSHV ____ (Trần Phạm Thái Vũ liên hệ)
-  2. ____ — MSHV ____ (Võ Phú Hãn liên hệ)
-  - Kế hoạch (CP5): 5 người ngoài nhóm (gồm 2 người trên) tự dùng prototype với task "tìm hạn nộp và cách nộp một bài"; nhóm ngồi quan sát, ghi quote nguyên văn, chỗ kẹt, quyết định vào `validation/user_testing_log.md`; đưa ≥1 thay đổi vào §9.
+- **Willing users dự kiến + kế hoạch vòng validation:**
+  1. **Nguyễn Hồng Thái — `2A202602894`** — đã xác nhận.
+  2. **Lê Duy Quân — `2A202602731`** — đã xác nhận.
+  3. **Nguyễn Mạnh Cường — `2A202602650`** — đã xác nhận.
+  - Cả ba đều là người ngoài nhóm và có thể dùng thử prototype ở CP5.
+  - Kế hoạch (CP5): 5 người ngoài nhóm (gồm 3 người trên) tự dùng prototype với task "tìm hạn nộp và cách nộp một bài"; nhóm ngồi quan sát, ghi quote nguyên văn, chỗ kẹt, quyết định vào `validation/user_testing_log.md`; đưa ≥1 thay đổi vào §9.
 - **Multi-prototype:** không làm.
 
 ## §9. Changelog
