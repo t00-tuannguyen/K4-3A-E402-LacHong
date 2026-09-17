@@ -1,8 +1,10 @@
 # LacHong Discord Assistant UI
 
-React prototype for CP3. It runs with deterministic mock responses by default and can connect to a backend implementing the JSON contract in `FLOW_CP2.MD`.
+## Purpose
 
-## Run locally
+React/Vite client for the Track B1 demo. It renders a Discord-like learner chat and connects only to the local Core AI HTTP API. It never calls Gemini, 9router, Discord, or any secret-bearing service directly.
+
+## Run
 
 ```bash
 cd codebase/ui
@@ -11,33 +13,45 @@ npm install
 npm run dev
 ```
 
-No API key is required in mock mode.
-
-## Connect a backend
-
-Set the following values in `.env`:
+Use `VITE_API_MODE=mock` for deterministic UI work. Use the following values to connect the local backend:
 
 ```env
 VITE_API_MODE=api
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
-The UI sends `POST /api/assist`, fetches the official-source archive from `GET /api/sources`, and loads the team-only Golden Set from `GET /api/evaluation/cases`. It does not call Gemini or Discord directly, and no secret belongs in this directory.
+## Backend contract
 
-## Golden Set evaluation panel
+| UI operation | Endpoint | Notes |
+|---|---|---|
+| Send learner message | `POST /api/assist` | Receives an `AgentResponse`; UI validates its shape before rendering. |
+| Open source archive | `GET /api/sources` | Sources appear in `#nguon-chinh-thuc`. |
+| Load Golden Set | `GET /api/evaluation/cases` | Available only in API mode; reads the backend-owned 30-case set. |
 
-In API mode, open **Agent Inspector** from the channel header. The panel lets the team select a group or a case, then run one case or all 30 cases sequentially through the backend. It compares the returned intent, effective action, and citation ID against `eval/golden_set.json`.
+The request and response TypeScript contracts live in `src/types.ts`. Keep backend and frontend changes compatible with those types.
 
-This is a review tool, separate from the learner-facing chat. The canonical full evaluation remains `python eval/run_eval.py`; it additionally checks factuality, conciseness, and safety boundaries and writes the report artifacts.
+## Product behavior
 
-## CP3 demo path
+- Learner messages display an editable `@Trợ lý` mention. The UI removes that display mention before sending `message_text` to the backend.
+- A cited answer can open `#nguon-chinh-thuc` and highlight the mock official announcement.
+- Clarification chips send a follow-up learner question.
+- A TA handoff adds a reply-style assistant message that quotes and links back to the original learner question. It is a local demo interaction; it does not create a Discord thread or webhook.
+- Out-of-scope requests show `/ticket create` guidance. They do not modify learner records or deadlines.
 
-1. Start in mock mode and click each of the five scenario buttons.
-2. Show the source citation for Lab 02.
-3. Show clarification chips, then click `Lab 02 CVAT`.
-4. Show the handoff button and confirmation toast.
-5. Start the Core AI service from the repository root with `python -m uvicorn codebase.core_ai.server:app --reload`.
-6. Switch to API mode and record the 30-second real-AI call. The UI uses the backend response and backend source archive; it has no production citations hardcoded in API mode.
+## Golden Set panel
+
+The collapsible **Evaluation** bar sits above the composer. It uses the six categories from `eval/golden_set.json`, with Vietnamese display labels only:
+
+1. Có nguồn / trả lời được
+2. Chưa có thông báo chính thức
+3. Cần làm rõ câu hỏi
+4. Ngoài quyền hỗ trợ
+5. Mâu thuẫn nguồn
+6. Bẫy an toàn / prompt injection
+
+Selecting a case and clicking **Đưa vào chat** only prefills the composer. A presenter then presses Enter or Gửi, so the visible chat follows the same path as a learner message. **Tự chạy cả 30** is the separate batch-review action.
+
+The UI quick-check compares intent, effective action, and cited source ID. The canonical evaluation remains `python eval/run_eval.py`, which also evaluates factuality, conciseness, and safety boundaries.
 
 ## Checks
 
