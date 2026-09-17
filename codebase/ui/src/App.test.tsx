@@ -75,6 +75,17 @@ describe("Discord assistant UI", () => {
     expect(scenario.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it("scrolls the chat history to the newest message", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const history = screen.getByLabelText("Lịch sử trò chuyện");
+    Object.defineProperty(history, "scrollHeight", { configurable: true, value: 600 });
+
+    await user.click(screen.getByRole("button", { name: "Có nguồn" }));
+
+    expect(history.scrollTop).toBe(600);
+  });
+
   it("toggles the agent inspector and light theme", async () => {
     const user = userEvent.setup();
     render(<App />);

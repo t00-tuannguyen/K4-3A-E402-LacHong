@@ -32,6 +32,7 @@ export default function App() {
   const [sourceError, setSourceError] = useState<string | null>(null);
   const [selectedSourceId, setSelectedSourceId] = useState<string | undefined>();
   const retryText = useRef<string | null>(null);
+  const chatHistoryRef = useRef<HTMLElement | null>(null);
 
   async function loadSources() {
     try {
@@ -43,6 +44,13 @@ export default function App() {
   }
 
   useEffect(() => { void loadSources(); }, []);
+
+  useEffect(() => {
+    const chatHistory = chatHistoryRef.current;
+    if (!chatHistory) return;
+
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+  }, [activeChannel, error, loading, messages]);
 
   async function send(text: string) {
     const messageText = text.trim().replace(/^@Trợ lý\s*/i, "");
@@ -92,7 +100,7 @@ export default function App() {
 
   return (
     <DiscordChrome theme={theme} onToggleTheme={() => setTheme((current) => current === "dark" ? "light" : "dark")} inspectorOpen={inspectorOpen} onToggleInspector={() => setInspectorOpen((current) => !current)} inspector={<AgentInspector trace={trace} />} activeChannel={activeChannel} onChannelSelect={setActiveChannel}>
-      <section aria-label="Lịch sử trò chuyện" className="flex-1 overflow-y-auto py-3">
+      <section ref={chatHistoryRef} aria-label="Lịch sử trò chuyện" className="flex-1 overflow-y-auto py-3">
         {activeChannel === "nguon-chinh-thuc" ? <SourceChannelMessages sources={sources} selectedId={selectedSourceId} error={sourceError} onRetry={loadSources} /> : messages.map((message) => <MessageBubble key={message.id} message={message} onOption={send} onHandoff={(response) => handoff(message, response)} onTicket={showTicketGuidance} onSourceOpen={(response) => { setSelectedSourceId(response.source_citation?.ground_truth_id); setActiveChannel("nguon-chinh-thuc"); }} />)}
         {loading && <div role="status" className="flex items-center gap-2 px-16 py-3 text-xs text-[var(--discord-text-faint)]"><span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" /> Trợ lý đang kiểm tra nguồn…</div>}
         {error && <div role="alert" className="mx-4 mt-2 flex items-center justify-between rounded border border-red-700 bg-red-950/40 p-3 text-sm text-red-200"><span>{error}</span><button onClick={() => retryText.current && send(retryText.current)} className="rounded bg-red-600 px-3 py-1 text-xs text-white">Thử lại</button></div>}
