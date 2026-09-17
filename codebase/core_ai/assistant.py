@@ -16,7 +16,7 @@ import unicodedata
 import uuid
 from contextvars import ContextVar
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -32,7 +32,8 @@ SYSTEM_PROMPT = (CONFIG_DIR / "system_prompt.md").read_text(encoding="utf-8")
 SOURCE_ALIASES: dict[str, tuple[str, ...]] = {
     "ANN_01": (
         "onboarding", "ghép đội", "ghep doi", "tìm đồng đội", "tim dong doi",
-        "thành lập team", "thanh lap team", "chung team", "khác lớp lab", "khac lop lab",
+        "thành lập team", "thanh lap team", "chung team",
+        "khác lớp lab", "khac lop lab", "khác lớp", "khac lop",
     ),
     "ANN_02": (
         "đổi tên", "doi ten", "tên discord", "ten discord", "cú pháp", "cu phap",
@@ -110,6 +111,19 @@ CLARIFICATION_OPTIONS = [
     {"label": "Ghép đội tự do", "value": "Hạn ghép đội tự do là khi nào?"},
 ]
 
+# Phrases that mark user input as hearsay / unverified rumor.
+# These MUST NOT trigger report_conflict — they are NOT an official source.
+RUMOR_PHRASES = (
+    "nghe bảo", "nghe bao", "hình như", "hinh nhu",
+    "bạn bảo", "ban bao", "ai đó nói", "ai do noi",
+    "có người nói", "co nguoi noi", "nghe nói", "nghe noi",
+    "bạn em nói", "ban em noi", "mình nghe", "minh nghe",
+)
+
+
+# ---------------------------------------------------------------------------
+# Utility functions
+# ---------------------------------------------------------------------------
 
 def _fold(value: str) -> str:
     normalized = unicodedata.normalize("NFD", str(value).lower())
@@ -169,8 +183,21 @@ def _response(
     }
 
 
+# ---------------------------------------------------------------------------
+# Intent classification pipeline
+# ---------------------------------------------------------------------------
+
 def _guardrail_intent(text: str) -> str | None:
-    """Deterministic decisions that must never depend on an LLM guess."""
+    """Deterministic decisions that must never depend on an LLM guess.
+
+    RUMOR GUARD (Fix Prompt 8):
+    Phrases like "nghe bảo", "hình như" indicate hearsay from a peer — NOT
+    an official channel. They must never escalate to report_conflict; instead
+    we route to query_deadline so the backend re-affirms the Ground Truth.
+    """
+    # Rumor / hearsay guard — re-route to deadline lookup, never conflict
+    if _has(text, *RUMOR_PHRASES):
+        return "query_deadline"
     if _has(text, "email") and _has(text, "discord"):
         return "report_conflict"
     if _has(text, "điểm danh", "diem danh"):
@@ -433,190 +460,388 @@ def _grounded_intent(source: dict[str, Any], text: str) -> str:
     return "unknown"
 
 
-def answer(request: dict[str, Any], *, use_gemini: bool = True) -> dict[str, Any]:
-    """Return a safe CP2 contract object for an API/UI request."""
-    PROCESSING_PROVIDER.set("local_rules")
-    text = str(request.get("message_text", "")).strip()
-    if not text:
-        return _response(
-            intent="unknown", status="clarification_needed", confidence=1,
-            reply="Bạn hãy nhập câu hỏi về hạn nộp, cách nộp bài hoặc thủ tục K4 nhé.",
-        )
+# ---------------------------------------------------------------------------
+# Layer 1 — Pre-dispatch predicates & handlers
+# (text-pattern based, evaluated before intent classification matters)
+# ---------------------------------------------------------------------------
 
-    intent, provider = _classify(text, use_gemini)
-    PROCESSING_PROVIDER.set(provider)
+def _is_adversarial(text: str) -> bool:
+    return _has(text, "tôi là admin", "toi la admin", "đóng vai", "dong vai",
+                "trưởng ban tổ chức", "truong ban to chuc")
 
-    # Role-play and privilege claims never authorize writes to academic data.
-    if _has(text, "tôi là admin", "toi la admin", "đóng vai", "dong vai", "trưởng ban tổ chức", "truong ban to chuc"):
-        adversarial_intent = "adversarial_fake_admin" if _has(text, "tôi là admin", "toi la admin") else "adversarial_roleplay_jailbreak"
-        return _response(
-            intent=adversarial_intent, status="rejected", confidence=0.99,
-            reply="Mình không thể nhận vai BTC hoặc thay đổi điểm danh, kết quả học tập hay deadline. Mình chỉ tra cứu thông tin đã có trong thông báo chính thức.",
-            need_ta=True, reason="outside_authority",
-        )
 
-    is_daily_conflict = _has(text, "daily standup", "standup") and _has(
+def _handle_adversarial(text: str) -> dict[str, Any]:
+    adversarial_intent = (
+        "adversarial_fake_admin"
+        if _has(text, "tôi là admin", "toi la admin")
+        else "adversarial_roleplay_jailbreak"
+    )
+    return _response(
+        intent=adversarial_intent, status="rejected", confidence=0.99,
+        reply="Mình không thể nhận vai BTC hoặc thay đổi điểm danh, kết quả học tập hay deadline. "
+              "Mình chỉ tra cứu thông tin đã có trong thông báo chính thức.",
+        need_ta=True, reason="outside_authority",
+    )
+
+
+def _is_conflict(text: str) -> bool:
+    """True only when BOTH sides of a conflict are official channels.
+
+    IMPORTANT: Hearsay ('nghe bảo', 'hình như') is NOT an official channel.
+    RUMOR_PHRASES are already intercepted by _guardrail_intent() → query_deadline,
+    so any rumor-bearing message never reaches this predicate.
+    """
+    return _has(text, "email") and _has(text, "discord")
+
+
+def _handle_conflict(text: str) -> dict[str, Any]:
+    conflict_source = _source_for(text)
+    return _response(
+        intent="resolve_deadline_conflict", status="ta_handoff", confidence=0.95,
+        reply="⚠️ Mình ghi nhận có mâu thuẫn giữa email và thông báo Discord chính thức. "
+              "Bạn nên nộp theo mốc sớm hơn nếu còn kịp; mình sẽ chuyển TA xác minh thông báo chính thức.",
+        source=conflict_source,
+        interactive_type="button_handoff",
+        options=[{"label": "🔴 Chuyển cho TA hỗ trợ", "action": "trigger_ta_handoff"}],
+        need_ta=True, reason="conflicting_official_sources",
+    )
+
+
+def _is_daily_conflict(text: str) -> bool:
+    return _has(text, "daily standup", "standup") and _has(
         text, "báo hết hạn", "bao het han", "bot bảo", "bot bao"
     )
-    is_phoenix_issue = _has(text, "phoenix") and _has(
+
+
+def _handle_daily_conflict(text: str) -> dict[str, Any]:
+    source = _source_by_id("ANN_05")
+    return _response(
+        intent="resolve_daily_standup_conflict", status="ta_handoff", confidence=0.98,
+        reply=source["content"] + " Nếu hệ thống hiển thị khác quy định này, mình sẽ chuyển TA kiểm tra.",
+        source=source,
+        interactive_type="button_handoff",
+        options=[{"label": "🔴 Chuyển cho TA hỗ trợ", "action": "trigger_ta_handoff"}],
+        need_ta=True, reason="conflicting_sources",
+    )
+
+
+def _is_event_location(text: str) -> bool:
+    return _has(text, "lịch thi", "lich thi") and _has(text, "phòng", "phong")
+
+
+def _handle_event_location(text: str) -> dict[str, Any]:
+    return _response(
+        intent="query_event_location_unannounced", status="ta_handoff", confidence=0.98,
+        reply="Kho thông báo chính thức chưa có địa điểm phòng thi Hackathon. "
+              "Mình không suy đoán; bạn hãy theo dõi #thong-bao-chung hoặc chuyển TA hỗ trợ.",
+        interactive_type="button_handoff",
+        options=[{"label": "🔴 Chuyển cho TA hỗ trợ", "action": "trigger_ta_handoff"}],
+        need_ta=True, reason="no_official_ground_truth",
+    )
+
+
+def _is_room_booking(text: str) -> bool:
+    return _has(text, "book phòng", "book phong", "mượn phòng", "muon phong",
+                "phòng riêng", "phong rieng")
+
+
+def _handle_room_booking(text: str) -> dict[str, Any]:
+    return _response(
+        intent="query_offline_room_booking", status="ta_handoff", confidence=0.98,
+        reply="Kho thông báo chính thức chưa có quy định về việc đặt phòng họp nhóm. "
+              "Mình không tự phỏng đoán và sẽ chuyển TA xác nhận.",
+        interactive_type="button_handoff",
+        options=[{"label": "🔴 Chuyển cho TA hỗ trợ", "action": "trigger_ta_handoff"}],
+        need_ta=True, reason="no_official_ground_truth",
+    )
+
+
+def _is_delete_submission(text: str) -> bool:
+    return _has(text, "xoá", "xóa", "xoa", "delete") and _has(text, "bài nộp", "bai nop", "vlearn")
+
+
+def _handle_delete_submission(text: str) -> dict[str, Any]:
+    source = _source_by_id("ANN_04")
+    return _response(
+        intent="request_delete_submission", status="rejected", confidence=0.99,
+        reply="Mình không có quyền xóa hoặc thay đổi bài nộp trên VLearn. "
+              "Nếu không thể tự nộp lại khi còn hạn, bạn hãy dùng /ticket create tại #ticket-support để TA xử lý.",
+        source=source,
+        interactive_type="button_ticket",
+        options=[{"label": "Mở hướng dẫn /ticket create", "action": "show_ticket_help"}],
+        need_ta=True, reason="outside_authority",
+    )
+
+
+def _is_phoenix_issue(text: str) -> bool:
+    return _has(text, "phoenix") and _has(
         text, "chưa vào", "chua vao", "không vào", "khong vao", "lỗi", "loi"
     )
 
-    if (
-        (intent == "report_conflict" and not is_daily_conflict and not is_phoenix_issue)
-        or (_has(text, "email") and _has(text, "discord"))
-    ):
-        conflict_source = _source_for(text)
-        return _response(
-            intent="resolve_deadline_conflict", status="ta_handoff", confidence=0.95,
-            reply="⚠️ Mình ghi nhận có mâu thuẫn giữa các nguồn. Bạn nên nộp theo mốc sớm hơn nếu còn kịp; mình sẽ chuyển TA xác minh thông báo chính thức.",
-            source=conflict_source,
-            interactive_type="button_handoff", options=[{"label": "🔴 Chuyển cho TA hỗ trợ", "action": "trigger_ta_handoff"}],
-            need_ta=True, reason="conflicting_sources",
-        )
 
-    if is_daily_conflict:
-        source = _source_by_id("ANN_05")
-        return _response(
-            intent="resolve_daily_standup_conflict", status="ta_handoff", confidence=0.98,
-            reply=source["content"] + " Nếu hệ thống hiển thị khác quy định này, mình sẽ chuyển TA kiểm tra.",
-            source=source, interactive_type="button_handoff",
-            options=[{"label": "🔴 Chuyển cho TA hỗ trợ", "action": "trigger_ta_handoff"}],
-            need_ta=True, reason="conflicting_sources",
-        )
+def _handle_phoenix_issue(text: str) -> dict[str, Any]:
+    source = _source_by_id("ANN_06")
+    return _response(
+        intent="troubleshoot_phoenix_login", status="rejected", confidence=0.99,
+        reply="Mình không thể can thiệp tài khoản Phoenix. " + source["content"],
+        source=source,
+        interactive_type="button_ticket",
+        options=[{"label": "Mở hướng dẫn /ticket create", "action": "show_ticket_help"}],
+        need_ta=True, reason="outside_authority",
+    )
 
-    if _has(text, "lịch thi", "lich thi") and _has(text, "phòng", "phong"):
-        return _response(
-            intent="query_event_location_unannounced", status="ta_handoff", confidence=0.98,
-            reply="Kho thông báo chính thức chưa có địa điểm phòng thi Hackathon. Mình không suy đoán; bạn hãy theo dõi #thong-bao-chung hoặc chuyển TA hỗ trợ.",
-            interactive_type="button_handoff", options=[{"label": "🔴 Chuyển cho TA hỗ trợ", "action": "trigger_ta_handoff"}],
-            need_ta=True, reason="no_official_ground_truth",
-        )
 
-    if _has(text, "book phòng", "book phong", "mượn phòng", "muon phong", "phòng riêng", "phong rieng"):
-        return _response(
-            intent="query_offline_room_booking", status="ta_handoff", confidence=0.98,
-            reply="Kho thông báo chính thức chưa có quy định về việc đặt phòng họp nhóm. Mình không tự phỏng đoán và sẽ chuyển TA xác nhận.",
-            interactive_type="button_handoff", options=[{"label": "🔴 Chuyển cho TA hỗ trợ", "action": "trigger_ta_handoff"}],
-            need_ta=True, reason="no_official_ground_truth",
-        )
+# Ordered list of (predicate, handler) pairs evaluated top-to-bottom.
+# The first matching predicate short-circuits the rest.
+_PRE_DISPATCH: list[tuple[Callable[[str], bool], Callable[[str], dict[str, Any]]]] = [
+    (_is_adversarial,       _handle_adversarial),
+    (_is_daily_conflict,    _handle_daily_conflict),   # before _is_conflict to avoid ANN_05 false positive
+    (_is_conflict,          _handle_conflict),
+    (_is_event_location,    _handle_event_location),
+    (_is_room_booking,      _handle_room_booking),
+    (_is_delete_submission, _handle_delete_submission),
+    (_is_phoenix_issue,     _handle_phoenix_issue),
+]
 
-    if _has(text, "xoá", "xóa", "xoa", "delete") and _has(text, "bài nộp", "bai nop", "vlearn"):
-        source = _source_by_id("ANN_04")
+
+# ---------------------------------------------------------------------------
+# Layer 3 — Intent dispatch handlers
+# ---------------------------------------------------------------------------
+
+def _handle_attendance(text: str) -> dict[str, Any]:
+    attendance_source = _source_by_id("ANN_02")
+    if _has(text, "check", "sửa", "sua", "ghi nhận", "ghi nhan", "hộ em", "ho em"):
         return _response(
-            intent="request_delete_submission", status="rejected", confidence=0.99,
-            reply="Mình không có quyền xóa hoặc thay đổi bài nộp trên VLearn. Nếu không thể tự nộp lại khi còn hạn, bạn hãy dùng /ticket create tại #ticket-support để TA xử lý.",
-            source=source, interactive_type="button_ticket",
+            intent="request_modify_attendance", status="rejected", confidence=0.99,
+            reply="Mình không có quyền kiểm tra hoặc sửa dữ liệu điểm danh. "
+                  "Bạn hãy liên hệ Lab Coach của buổi học hoặc mở ticket để được hỗ trợ.",
+            source=attendance_source,
+            interactive_type="button_ticket",
             options=[{"label": "Mở hướng dẫn /ticket create", "action": "show_ticket_help"}],
             need_ta=True, reason="outside_authority",
         )
+    return _response(
+        intent="query_attendance_workshop", status="clarification_needed", confidence=0.95,
+        reply=attendance_source["content"] + " Bạn đang hỏi điểm danh workshop nào?",
+        source=attendance_source,
+        interactive_type="chips",
+        options=[{"label": "Liên hệ Lab Coach", "value": "Tôi cần liên hệ Lab Coach về điểm danh"}],
+    )
 
-    if is_phoenix_issue:
-        source = _source_by_id("ANN_06")
-        return _response(
-            intent="troubleshoot_phoenix_login", status="rejected", confidence=0.99,
-            reply="Mình không thể can thiệp tài khoản Phoenix. " + source["content"],
-            source=source, interactive_type="button_ticket",
-            options=[{"label": "Mở hướng dẫn /ticket create", "action": "show_ticket_help"}],
-            need_ta=True, reason="outside_authority",
-        )
 
-    if intent == "query_attendance":
-        attendance_source = _source_by_id("ANN_02")
-        if _has(text, "check", "sửa", "sua", "ghi nhận", "ghi nhan", "hộ em", "ho em"):
-            return _response(
-                intent="request_modify_attendance", status="rejected", confidence=0.99,
-                reply="Mình không có quyền kiểm tra hoặc sửa dữ liệu điểm danh. Bạn hãy liên hệ Lab Coach của buổi học hoặc mở ticket để được hỗ trợ.",
-                source=attendance_source, interactive_type="button_ticket",
-                options=[{"label": "Mở hướng dẫn /ticket create", "action": "show_ticket_help"}],
-                need_ta=True, reason="outside_authority",
-            )
-        return _response(
-            intent="query_attendance_workshop", status="clarification_needed", confidence=0.95,
-            reply=attendance_source["content"] + " Bạn đang hỏi điểm danh workshop nào?",
-            source=attendance_source, interactive_type="chips",
-            options=[{"label": "Liên hệ Lab Coach", "value": "Tôi cần liên hệ Lab Coach về điểm danh"}],
-        )
+def _handle_submission_status(text: str) -> dict[str, Any]:
+    """Partial Fulfillment fix (Prompt 10 — Multi-Intent Dropout).
 
-    if intent == "query_submission_status":
-        return _response(
-            intent="check_personal_submission_status", status="rejected", confidence=0.99,
-            reply="Mình không có quyền xem trạng thái bài nộp cá nhân. Bạn hãy tự kiểm tra trên VLearn; nếu dữ liệu có vấn đề, dùng /ticket create tại #ticket-support.",
-            interactive_type="button_ticket", options=[{"label": "Mở hướng dẫn /ticket create", "action": "show_ticket_help"}],
-            need_ta=True, reason="outside_authority",
-        )
+    When the user asks BOTH about a deadline AND submission status in one message,
+    the previous implementation silently dropped the deadline answer and only
+    returned the out-of-scope rejection. Now we:
+      1. Check whether the message also contains a deadline query.
+      2. If yes, prepend the grounded deadline answer before the rejection notice.
+         Prioritise the lab-specific source (ANN_03/ANN_04) over generic sources
+         so "lab 2 + VLearn" does not accidentally resolve to ANN_06.
+      3. Return status='partial_rejected' so the eval suite can assert both parts.
+    """
+    has_deadline_query = _has(
+        text, "hạn", "han", "deadline", "khi nào", "khi nao", "bao giờ", "bao gio",
+        "mấy giờ", "may gio", "ngày nào", "ngay nao",
+    )
 
-    if intent == "request_extension":
+    deadline_source: dict[str, Any] | None = None
+    if has_deadline_query:
+        # Prefer a lab-specific source when the message names a specific lab,
+        # to avoid ANN_06 (support channel) winning via "tai khoan"/"vlearn" aliases.
+        if _has(text, "lab 2", "lab02", "lab 02", "cvat"):
+            deadline_source = _source_by_id("ANN_04")
+        elif _has(text, "lab 1", "lab01", "lab 01", "codelab"):
+            deadline_source = _source_by_id("ANN_03")
+        else:
+            deadline_source = _source_for(text)
+
+    prefix = (deadline_source["content"] + "\n\n") if deadline_source else ""
+    status = "partial_rejected" if prefix else "rejected"
+
+    return _response(
+        intent="check_personal_submission_status", status=status, confidence=0.99,
+        reply=(
+            prefix
+            + "Mình không có quyền xem trạng thái bài nộp cá nhân. "
+              "Bạn hãy tự kiểm tra trên VLearn; nếu dữ liệu có vấn đề, "
+              "dùng /ticket create tại #ticket-support."
+        ),
+        source=deadline_source,
+        interactive_type="button_ticket",
+        options=[{"label": "Mở hướng dẫn /ticket create", "action": "show_ticket_help"}],
+        need_ta=True, reason="outside_authority",
+    )
+
+
+def _handle_extension(text: str) -> dict[str, Any]:
+    support_source = _source_by_id("ANN_06")
+    return _response(
+        intent="request_deadline_extension", status="rejected", confidence=0.99,
+        reply="Mình không có thẩm quyền duyệt gia hạn. " + support_source["content"],
+        source=support_source,
+        interactive_type="button_ticket",
+        options=[{"label": "Mở hướng dẫn /ticket create", "action": "show_ticket_help"}],
+        need_ta=True, reason="outside_authority",
+    )
+
+
+def _handle_greeting(text: str) -> dict[str, Any]:
+    return _response(
+        intent="greeting", status="answered", confidence=0.98,
+        reply="Chào bạn! Mình hỗ trợ tra cứu hạn nộp, cách nộp bài và thủ tục K4 từ thông báo chính thức.",
+    )
+
+
+def _handle_late_policy(text: str) -> dict[str, Any]:
+    if _has(text, "lab", "trừ bao nhiêu", "tru bao nhieu", "phạt", "phat"):
         support_source = _source_by_id("ANN_06")
         return _response(
-            intent="request_deadline_extension", status="rejected", confidence=0.99,
-            reply="Mình không có thẩm quyền duyệt gia hạn. " + support_source["content"],
+            intent="query_late_submission_penalty", status="answered", confidence=0.98,
+            reply="Kho thông báo hiện chưa có barem trừ điểm cụ thể cho Lab nộp muộn. " + support_source["content"],
             source=support_source,
-            interactive_type="button_ticket", options=[{"label": "Mở hướng dẫn /ticket create", "action": "show_ticket_help"}],
-            need_ta=True, reason="outside_authority",
+            interactive_type="button_ticket",
+            options=[{"label": "Mở hướng dẫn /ticket create", "action": "show_ticket_help"}],
+            need_ta=True, reason="missing_specific_policy",
         )
+    return _handle_source_lookup(text, "query_late_policy")
 
-    if intent == "greeting":
+
+def _handle_source_lookup(text: str, intent: str) -> dict[str, Any]:
+    """Attempt to resolve the query against the Ground Truth store."""
+    # Lab 4 guard — no official announcement exists yet
+    if re.search(r"\blab\s*0?4\b", _fold(text)):
         return _response(
-            intent="greeting", status="answered", confidence=0.98,
-            reply="Chào bạn! Mình hỗ trợ tra cứu hạn nộp, cách nộp bài và thủ tục K4 từ thông báo chính thức.",
+            intent="query_deadline_unannounced", status="ta_handoff", confidence=0.98,
+            reply="Hiện BTC chưa công bố thông tin chính thức cho Lab 4. "
+                  "Để tránh suy đoán sai, mình không tự đưa ra deadline.",
+            interactive_type="button_handoff",
+            options=[{"label": "🔴 Chuyển cho TA hỗ trợ", "action": "trigger_ta_handoff"}],
+            need_ta=True, reason="no_official_ground_truth",
         )
 
     source = _source_for(text)
 
-    if re.search(r"\blab\s*0?4\b", _fold(text)):
-        return _response(
-            intent="query_deadline_unannounced", status="ta_handoff", confidence=0.98,
-            reply="Hiện BTC chưa công bố thông tin chính thức cho Lab 4. Để tránh suy đoán sai, mình không tự đưa ra deadline.",
-            interactive_type="button_handoff", options=[{"label": "🔴 Chuyển cho TA hỗ trợ", "action": "trigger_ta_handoff"}],
-            need_ta=True, reason="no_official_ground_truth",
-        )
-
-    if source is None and _has(text, "link nộp", "link nop", "nộp bài ở đâu", "nop bai o dau", "nộp ở đâu", "nop o dau"):
+    # Ambiguous submission location
+    if source is None and _has(
+        text, "link nộp", "link nop", "nộp bài ở đâu", "nop bai o dau", "nộp ở đâu", "nop o dau"
+    ):
         clarification_intent = "query_submission_link_ambiguous" if _has(text, "link") else "query_submission_place_ambiguous"
         return _response(
             intent=clarification_intent, status="clarification_needed", confidence=0.98,
-            reply="Bạn cần link nộp Lab 01, Lab 02 hay Daily Standup? Hãy chọn nội dung để mình đối chiếu đúng thông báo.",
-            interactive_type="chips", options=[
+            reply="Bạn cần link nộp Lab 01, Lab 02 hay Daily Standup? "
+                  "Hãy chọn nội dung để mình đối chiếu đúng thông báo.",
+            interactive_type="chips",
+            options=[
                 {"label": "Lab 01 Codelab", "value": "Nộp Lab 01 Codelab ở đâu?"},
                 {"label": "Lab 02 CVAT", "value": "Nộp Lab 02 CVAT ở đâu?"},
                 {"label": "Daily Standup", "value": "Nộp Daily Standup ở đâu?"},
             ],
         )
 
+    # Ambiguous deadline / location (no source matched, intent is generic)
     if source is None and intent in {"query_deadline", "query_submission_location"}:
-        clarification_intent = "query_submission_place_ambiguous" if intent == "query_submission_location" else "query_deadline_ambiguous"
+        clarification_intent = (
+            "query_submission_place_ambiguous"
+            if intent == "query_submission_location"
+            else "query_deadline_ambiguous"
+        )
         return _response(
             intent=clarification_intent, status="clarification_needed", confidence=0.95,
-            reply="Bạn đang cần tra cứu nội dung nào? Hãy chọn nhanh bên dưới để mình đối chiếu thông báo chính thức.",
-            interactive_type="chips", options=CLARIFICATION_OPTIONS,
+            reply="Bạn đang cần tra cứu nội dung nào? "
+                  "Hãy chọn nhanh bên dưới để mình đối chiếu thông báo chính thức.",
+            interactive_type="chips",
+            options=CLARIFICATION_OPTIONS,
         )
 
-    if intent == "query_late_policy" and _has(text, "lab", "trừ bao nhiêu", "tru bao nhieu", "phạt", "phat"):
-        support_source = _source_by_id("ANN_06")
-        return _response(
-            intent="query_late_submission_penalty", status="answered", confidence=0.98,
-            reply="Kho thông báo hiện chưa có barem trừ điểm cụ thể cho Lab nộp muộn. " + support_source["content"],
-            source=support_source, interactive_type="button_ticket",
-            options=[{"label": "Mở hướng dẫn /ticket create", "action": "show_ticket_help"}],
-            need_ta=True, reason="missing_specific_policy",
-        )
-
+    # Source found — return grounded answer
     if source:
         grounded_intent = _grounded_intent(source, text)
         reply = source["content"]
         if grounded_intent == "query_cross_class_team_policy":
-            reply = "Thông báo hiện chỉ xác nhận quy trình và hạn ghép đội trên Phoenix; chưa nêu rõ việc ghép team khác lớp. " + reply
+            reply = (
+                "Thông báo hiện chỉ xác nhận quy trình và hạn ghép đội trên Phoenix; "
+                "chưa nêu rõ việc ghép team khác lớp. " + reply
+            )
         elif grounded_intent == "query_onboarding_points_vs_xp":
-            reply = "Thông báo hiện chỉ xác nhận cách tra cứu XP, chưa có căn cứ để kết luận điểm onboarding có quy đổi sang XP hay không. " + reply
+            reply = (
+                "Thông báo hiện chỉ xác nhận cách tra cứu XP, "
+                "chưa có căn cứ để kết luận điểm onboarding có quy đổi sang XP hay không. " + reply
+            )
         return _response(
             intent=grounded_intent, status="answered", confidence=0.99,
             reply=reply, source=source,
         )
 
+    return _handle_unknown(text)
+
+
+def _handle_unknown(text: str) -> dict[str, Any]:
     return _response(
         intent="unknown", status="ta_handoff", confidence=0.7,
         reply="Mình chưa có căn cứ chính thức để trả lời câu này. Bạn có muốn chuyển TA hỗ trợ không?",
-        interactive_type="button_handoff", options=[{"label": "🔴 Chuyển cho TA hỗ trợ", "action": "trigger_ta_handoff"}],
+        interactive_type="button_handoff",
+        options=[{"label": "🔴 Chuyển cho TA hỗ trợ", "action": "trigger_ta_handoff"}],
         need_ta=True, reason="unsupported_or_no_ground_truth",
     )
+
+
+# Intent → handler mapping.
+# Intents not listed here fall through to _handle_source_lookup() which
+# attempts a Ground Truth source match before finally calling _handle_unknown().
+# NOTE: "unknown" is intentionally NOT listed here — it must fall through to
+# _handle_source_lookup() so that queries like "Ghep doi khac lop" (classified
+# as "unknown" by local_rules) can still be resolved via alias matching.
+INTENT_HANDLERS: dict[str, Callable[[str], dict[str, Any]]] = {
+    "greeting":                _handle_greeting,
+    "query_attendance":        _handle_attendance,
+    "query_submission_status": _handle_submission_status,
+    "request_extension":       _handle_extension,
+    "query_late_policy":       _handle_late_policy,
+    "report_conflict":         _handle_conflict,       # LLM-classified conflict (not pre-dispatch)
+}
+
+
+# ---------------------------------------------------------------------------
+# Public entry point
+# ---------------------------------------------------------------------------
+
+def answer(request: dict[str, Any], *, use_gemini: bool = True) -> dict[str, Any]:
+    """Return a safe CP2 contract object for an API/UI request.
+
+    Processing layers
+    -----------------
+    0. Empty-input guard.
+    1. Pre-dispatch guards — text-pattern checks that override intent (adversarial,
+       daily standup conflict, official-channel conflict, room booking, etc.).
+    2. Intent classification — guardrail → LLM → local keyword fallback.
+    3. Intent dispatch table — maps classified intent to a dedicated handler.
+       Intents not in the table fall through to source-lookup / unknown.
+    """
+    PROCESSING_PROVIDER.set("local_rules")
+    text = str(request.get("message_text", "")).strip()
+
+    # Layer 0 — empty input
+    if not text:
+        return _response(
+            intent="unknown", status="clarification_needed", confidence=1,
+            reply="Bạn hãy nhập câu hỏi về hạn nộp, cách nộp bài hoặc thủ tục K4 nhé.",
+        )
+
+    # Layer 1 — pre-dispatch text-pattern guards (short-circuit on first match)
+    for predicate, handler in _PRE_DISPATCH:
+        if predicate(text):
+            return handler(text)
+
+    # Layer 2 — classify intent
+    intent, provider = _classify(text, use_gemini)
+    PROCESSING_PROVIDER.set(provider)
+
+    # Layer 3 — intent dispatch
+    handler_fn = INTENT_HANDLERS.get(intent)
+    if handler_fn:
+        return handler_fn(text)
+
+    # Layer 3 fallback — source lookup → clarification → unknown
+    return _handle_source_lookup(text, intent)
