@@ -14,6 +14,8 @@ from typing import Any
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from codebase.core_ai.assistant import DEFAULT_9ROUTER_MODEL, DEFAULT_MODEL, RAW_SOURCES, answer
@@ -21,6 +23,7 @@ from codebase.core_ai.assistant import DEFAULT_9ROUTER_MODEL, DEFAULT_MODEL, RAW
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 GOLDEN_SET_PATH = PROJECT_ROOT / "eval" / "golden_set.json"
+UI_DIST_PATH = PROJECT_ROOT / "codebase" / "ui" / "dist"
 load_dotenv(PROJECT_ROOT / ".env")
 
 
@@ -125,3 +128,16 @@ def sources() -> dict[str, list[dict[str, Any]]]:
 def evaluation_cases() -> dict[str, list[dict[str, Any]]]:
     """Expose the Golden Set to the local team-only evaluation panel."""
     return {"cases": _golden_set_cases()}
+
+
+# Production deploy: serve the built UI from the same origin as the API.
+# Registered last so the API routes above take precedence.
+if (UI_DIST_PATH / "index.html").is_file():
+    app.mount("/assets", StaticFiles(directory=UI_DIST_PATH / "assets"), name="ui-assets")
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def ui(path: str) -> FileResponse:
+        file = (UI_DIST_PATH / path).resolve()
+        if path and file.is_file() and file.is_relative_to(UI_DIST_PATH.resolve()):
+            return FileResponse(file)
+        return FileResponse(UI_DIST_PATH / "index.html")
