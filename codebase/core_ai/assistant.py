@@ -1,6 +1,6 @@
 """Grounded response router for the Discord assistant.
 
-Gemini is used only to classify intent. This module writes every grounded fact
+An LLM is used only to classify intent. This module writes every grounded fact
 and citation from codebase/data/official_announcements.json, preventing the
 model from inventing information when an official source is missing.
 """
@@ -80,6 +80,7 @@ GROUNDING_CONTEXT = json.dumps(
 )
 # Low-latency model with generous quota for CP3 intent classification.
 DEFAULT_MODEL = "gemini-3.5-flash-lite"
+DEFAULT_9ROUTER_MODEL = "cx/deepseek-chat"
 LOGGER = logging.getLogger(__name__)
 PROCESSING_PROVIDER: ContextVar[str] = ContextVar("processing_provider", default="local_rules")
 INTENTS = (
@@ -302,15 +303,102 @@ def _gemini_classification(message_text: str) -> dict[str, Any]:
     return result
 
 
+def _first_env(*names: str) -> str | None:
+    return next((value for name in names if (value := os.getenv(name))), None)
+
+
+def _9router_classification(message_text: str) -> dict[str, Any]:
+    """Call a 9router/OpenAI-compatible chat-completions endpoint."""
+    api_key = _first_env("NINEROUTER_API_KEY", "NINE_ROUTER_API_KEY", "OPENAI_API_KEY")
+    base_url = _first_env("NINEROUTER_BASE_URL", "NINE_ROUTER_BASE_URL", "OPENAI_BASE_URL")
+    if not api_key or not base_url:
+        LOGGER.warning("9router_call_skipped reason=missing_api_key_or_base_url")
+        raise RuntimeError("NINEROUTER_API_KEY and NINEROUTER_BASE_URL are required")
+
+    model = _first_env("NINEROUTER_MODEL", "NINE_ROUTER_MODEL", "OPENAI_MODEL") or DEFAULT_9ROUTER_MODEL
+    call_id = uuid.uuid4().hex[:12]
+    started_at = time.perf_counter()
+    endpoint = f"{base_url.rstrip('/')}/chat/completions"
+    instructions = (
+        f"{SYSTEM_PROMPT}\n\n"
+        "KHO GROUND TRUTH CHÍNH THỨC (chỉ dùng để nhận diện subject; "
+        "backend sẽ tự lấy dữ kiện và citation):\n"
+        f"{GROUNDING_CONTEXT}\n\n"
+        "Chỉ trả về một JSON object theo đúng schema đã yêu cầu, không dùng markdown."
+    )
+    payload = {
+        "model": model,
+        "temperature": 0,
+        "messages": [
+            {"role": "system", "content": instructions},
+            {"role": "user", "content": message_text},
+        ],
+    }
+    request = Request(
+        endpoint, data=json.dumps(payload).encode("utf-8"), method="POST",
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+    )
+    LOGGER.info("9router_call_started call_id=%s model=%s timeout_seconds=25", call_id, model)
+    try:
+        with urlopen(request, timeout=25) as http_response:
+            status_code = getattr(http_response, "status", 200)
+            body = json.load(http_response)
+    except HTTPError as error:
+        LOGGER.warning(
+            "9router_call_failed call_id=%s model=%s status_code=%s duration_ms=%d error=http_error",
+            call_id, model, error.code, round((time.perf_counter() - started_at) * 1000),
+        )
+        raise RuntimeError(f"9router returned HTTP {error.code}") from error
+    except (URLError, TimeoutError) as error:
+        LOGGER.warning(
+            "9router_call_failed call_id=%s model=%s status_code=unavailable duration_ms=%d error=connection_error",
+            call_id, model, round((time.perf_counter() - started_at) * 1000),
+        )
+        raise RuntimeError("9router connection failed") from error
+    except json.JSONDecodeError as error:
+        LOGGER.warning(
+            "9router_call_failed call_id=%s model=%s status_code=%s duration_ms=%d error=invalid_http_json",
+            call_id, model, status_code, round((time.perf_counter() - started_at) * 1000),
+        )
+        raise RuntimeError("9router returned an invalid HTTP JSON response") from error
+
+    try:
+        content = body["choices"][0]["message"]["content"]
+        result = json.loads(content)
+    except (IndexError, KeyError, TypeError, json.JSONDecodeError) as error:
+        LOGGER.warning(
+            "9router_call_failed call_id=%s model=%s status_code=%s duration_ms=%d error=invalid_classification_json",
+            call_id, model, status_code, round((time.perf_counter() - started_at) * 1000),
+        )
+        raise RuntimeError("9router returned no valid JSON classification") from error
+    if not isinstance(result, dict) or not all(field in result for field in CLASSIFICATION_SCHEMA["required"]):
+        raise RuntimeError("9router classification violates the contract")
+    if result["intent"] not in INTENTS or not isinstance(result["subject"], str) or not isinstance(result["reason"], str):
+        raise RuntimeError("9router classification violates the contract")
+    if not isinstance(result["is_ambiguous"], bool) or not isinstance(result["needs_human"], bool):
+        raise RuntimeError("9router classification violates the contract")
+    LOGGER.info(
+        "9router_call_succeeded call_id=%s model=%s status_code=%s duration_ms=%d intent=%s",
+        call_id, model, status_code, round((time.perf_counter() - started_at) * 1000), result["intent"],
+    )
+    return result
+
+
 def _classify(text: str, use_gemini: bool) -> tuple[str, str]:
     if guardrail := _guardrail_intent(text):
         LOGGER.info("Intent enforced by local guardrail: %s", guardrail)
         return guardrail, "local_guardrail"
     if use_gemini:
         try:
-            intent = str(_gemini_classification(text).get("intent", "unknown"))
-            LOGGER.info("intent_routed provider=gemini intent=%s", intent)
-            return intent, "gemini"
+            provider = os.getenv("LLM_PROVIDER", "gemini").lower()
+            if provider in {"9router", "openai_compatible"}:
+                intent = str(_9router_classification(text).get("intent", "unknown"))
+            elif provider == "gemini":
+                intent = str(_gemini_classification(text).get("intent", "unknown"))
+            else:
+                raise RuntimeError(f"Unsupported LLM_PROVIDER: {provider}")
+            LOGGER.info("intent_routed provider=%s intent=%s", provider, intent)
+            return intent, provider
         except RuntimeError as error:
             # Do not log prompt text or secrets; only disclose the safe fallback.
             LOGGER.warning("intent_fallback provider=local_rules reason=%s", error)
