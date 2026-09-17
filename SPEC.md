@@ -61,11 +61,11 @@ Loại: [x] Tối ưu tính năng có sẵn  [ ] Tính năng mới
   2. Không giải đáp nội dung kiến thức bài giảng / chữa bài.
   3. Không tích hợp bot Discord thật vào server khoá (demo trên giao diện web mô phỏng client Discord).
   4. Không tự đọc email của học viên — nguồn chỉ là tập thông báo chính thức nhóm nạp vào.
-- **Mức prototype nhắm tới:** [ ] Sketch [x] Mock [ ] Working *(tiến tới Working ở CP3–CP5)*
+- **Mức prototype hiện tại:** [ ] Sketch [ ] Mock [x] Working *(API và UI chạy thật; kho Ground Truth và handoff TA là fixture mô phỏng có kiểm soát)*
   - **Phần chạy THỰC TẾ (Real):**
     1. Giao diện Web mô phỏng Discord Client (`codebase/mock_ui/index.html`) chạy tương tác thật: hiển thị luồng chat, render các khối embed trích dẫn nguồn, các nút bấm chọn bài tập (chips) và nút chuyển TA.
-    2. Logic định tuyến trạng thái (State Machine): nhận diện đúng 4 trạng thái phản hồi (`answered`, `clarify`, `ta_handoff`, `rejected`) và render giao diện tương ứng theo JSON Contract.
-    3. Tại CP3 trở đi: Lời gọi AI thật bằng Gemini 1.5 Flash API (Google AI Studio) xử lý phân loại Intent và trích xuất dữ liệu có cấu trúc.
+    2. Logic định tuyến trạng thái (State Machine): nhận diện đúng 4 trạng thái phản hồi (`answered`, `clarification_needed`, `ta_handoff`, `rejected`) và render giao diện tương ứng theo JSON Contract.
+    3. Tại CP3 trở đi: Lời gọi AI thật bằng Gemini 3.5 Flash-Lite API (Google AI Studio) xử lý phân loại Intent; backend đối chiếu dữ kiện và citation từ Ground Truth chính thức.
   - **Phần chạy GIẢ LẬP (Mock):**
     1. Kho thông báo chính thức (Official Ground Truth): Nạp sẵn tập fixtures thông báo mẫu của BTC (Lab 01 Codelab, Lab 02 CVAT, Onboarding, Quy định nộp bài) vào bộ nhớ / file JSON thay vì cào trực tiếp qua bot token vào server Discord thật (tuân thủ Non-goal 3 & 4).
     2. Handoff TA: Nút `[🔴 Chuyển cho TA hỗ trợ]` hiển thị Toast thông báo xác nhận và ghi nhận log yêu cầu chuyển TA, chưa gửi webhook trực tiếp tới tài khoản Discord cá nhân của TA thật.
@@ -151,8 +151,8 @@ Bản prototype thể hiện rõ nét 4 đường đi tương tác của ngườ
 
   | Lượt chạy | Ngày giờ | Số case đạt | Tỷ lệ (%) | Phân tích lỗi chính & hành động khắc phục |
   |---|---|---|---|---|
-  | **Lượt 1 (Baseline)** | 17/09 09:30 | 16/30 | **53.3%** | **Lỗi ghi nhận:** 3 case thiếu nguồn bot tự đoán mò (TC_01, TC_02, TC_25); 4 case mơ hồ bot không hỏi lại mà đoán bừa (TC_03, TC_04, TC_05, TC_29); 4 case ngoài thẩm quyền bot xử lý sai / lệch intent (TC_06 M84993, TC_07 M88027, TC_24, TC_27); 2 case xung đột nguồn bot bỏ qua cảnh báo (TC_09, TC_28); 1 case lệch intent (TC_20 M75012); 2 case bị Jailbreak / Roleplay (TC_21, TC_30).<br>👉 *Hành động cho Người 3 (Core AI):* Cấu hình System Prompt Gemini 1.5 Flash với Strict Grounding theo tập `codebase/data/official_announcements.json`, bắt buộc trả về JSON có cấu trúc chứa trường `status` và `interactive_elements` theo đúng JSON Contract. |
-  | **Lượt 2 (Sau tối ưu Prompt)** | *(Dự kiến 17/9 trước CP4)* | — | — | Chạy đo sau khi Người 3 cắm API Gemini thật vào backend. |
+  | **Lượt 1 (Baseline)** | 17/09 09:30 | 16/30 | **53.3%** | **Lỗi ghi nhận:** 3 case thiếu nguồn bot tự đoán mò (TC_01, TC_02, TC_25); 4 case mơ hồ bot không hỏi lại mà đoán bừa (TC_03, TC_04, TC_05, TC_29); 4 case ngoài thẩm quyền bot xử lý sai / lệch intent (TC_06 M84993, TC_07 M88027, TC_24, TC_27); 2 case xung đột nguồn bot bỏ qua cảnh báo (TC_09, TC_28); 1 case lệch intent (TC_20 M75012); 2 case bị Jailbreak / Roleplay (TC_21, TC_30).<br>👉 *Hành động cho Người 3 (Core AI):* Cấu hình System Prompt Gemini 3.5 Flash-Lite với Strict Grounding theo tập `codebase/data/official_announcements.json`, bắt buộc trả về JSON có cấu trúc chứa trường `status` và `interactive_elements` theo đúng JSON Contract. |
+  | **Lượt 2 (API thật + Strict Grounding)** | 17/09 10:04 | 28/30 | **93.33%** | 30/30 intent, action, citation và safety khớp; 24 case dùng Gemini, 6 case dùng guardrail. TC_23 và TC_26 chưa đạt Factuality vì nguồn ANN_07/ANN_01 không chứa dữ kiện mà tiêu chí kỳ vọng yêu cầu. Chi tiết: `eval/run_results.md`. |
 
 ## §8. Phân công & kế hoạch
 

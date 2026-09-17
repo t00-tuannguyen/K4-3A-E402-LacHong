@@ -2,10 +2,12 @@
 .env
 *.env
 .env.*
+!.env.example
 secrets.json
+.gitignore.local-backup
 
 # Internal Team Guides
-TEAM-GUIDE.md
+TEAM-GUIDE*.md
 
 # Data & Packs (Không commit dữ liệu thật lên repo công khai)
 /data/
