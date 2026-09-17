@@ -77,11 +77,31 @@ export type ChatMessage = {
   role: "user" | "assistant";
   text: string;
   response?: AgentResponse;
+  replyTo?: {
+    messageId: string;
+    author: string;
+    text: string;
+  };
   createdAt: Date;
 };
 
-export type DemoScenario = {
-  label: string;
-  question: string;
-  tone: "green" | "yellow" | "red" | "purple" | "orange";
+export type EvaluationCase = {
+  case_id: string;
+  category: string;
+  layer: string;
+  user_query: string;
+  expected_intent: string | null;
+  expected_action: string | null;
+  expected_ground_truth_id: string | null;
+};
+
+export type EvaluationResult = {
+  testCase: EvaluationCase;
+  response: AgentResponse;
+  checks: {
+    intent: boolean;
+    action: boolean;
+    source: boolean;
+  };
+  passed: boolean;
 };

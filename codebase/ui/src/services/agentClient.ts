@@ -1,5 +1,5 @@
 import { mockOfficialSources, mockResponseFor } from "../data/mockScenarios";
-import type { AgentRequest, AgentResponse, AgentStatus, InteractiveType, OfficialSource } from "../types";
+import type { AgentRequest, AgentResponse, AgentStatus, EvaluationCase, InteractiveType, OfficialSource } from "../types";
 
 const statuses: AgentStatus[] = ["answered", "clarification_needed", "ta_handoff", "rejected"];
 const interactiveTypes: InteractiveType[] = ["none", "chips", "button_handoff", "button_ticket"];
@@ -91,4 +91,26 @@ export async function getOfficialSources(): Promise<OfficialSource[]> {
     throw new Error("Danh sách nguồn không đúng contract");
   }
   return archive;
+}
+
+export async function getEvaluationCases(): Promise<EvaluationCase[]> {
+  const mode = import.meta.env.VITE_API_MODE ?? "mock";
+  if (mode === "mock") throw new Error("Evaluation panel cần API mode để chạy Golden Set thật.");
+
+  const response = await fetch(`${apiBaseUrl()}/api/evaluation/cases`);
+  if (!response.ok) throw new Error(`Không thể tải Golden Set (HTTP ${response.status})`);
+  const payload: unknown = await response.json();
+  const cases = isRecord(payload) ? payload.cases : null;
+  if (!Array.isArray(cases) || !cases.every(isEvaluationCase)) {
+    throw new Error("Golden Set không đúng contract");
+  }
+  return cases;
+}
+
+function isEvaluationCase(value: unknown): value is EvaluationCase {
+  return isRecord(value) &&
+    ["case_id", "category", "layer", "user_query"].every((key) => typeof value[key] === "string") &&
+    (value.expected_intent === null || typeof value.expected_intent === "string") &&
+    (value.expected_action === null || typeof value.expected_action === "string") &&
+    (value.expected_ground_truth_id === null || typeof value.expected_ground_truth_id === "string");
 }

@@ -1,26 +1,25 @@
 import { AlertTriangle, Bot, ExternalLink, Headphones, ShieldAlert } from "lucide-react";
 import type { AgentResponse, ChatMessage } from "../types";
 
-export function MessageBubble({ message, onOption, onHandoff, onTicket, onSourceOpen }: { message: ChatMessage; onOption: (value: string) => void; onHandoff: (response: AgentResponse) => void; onTicket: () => void; onSourceOpen: (response: AgentResponse) => void }) {
+export function MessageBubble({ message, onOption, onHandoff, onTicket, onSourceOpen, onJumpToMessage }: { message: ChatMessage; onOption: (value: string) => void; onHandoff: (response: AgentResponse) => void; onTicket: () => void; onSourceOpen: (response: AgentResponse) => void; onJumpToMessage: (messageId: string) => void }) {
   const assistant = message.role === "assistant";
   return (
-    <article className="discord-message group flex gap-3 px-4 py-3">
+    <article id={`message-${message.id}`} className="discord-message group scroll-mt-3 flex gap-3 px-4 py-3">
       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${assistant ? "bg-[var(--discord-brand)]" : "bg-[var(--discord-green)]"}`}>
         {assistant ? <Bot size={21} /> : "HV"}
       </div>
       <div className="min-w-0 max-w-3xl flex-1">
         <div className="flex items-center gap-2"><strong className={assistant ? "text-[#c9cdfb]" : "text-[var(--discord-text-strong)]"}>{assistant ? "Trợ lý K4" : "Học Viên K4"}</strong>{assistant && <span className="rounded bg-[var(--discord-brand)] px-1.5 text-[10px] font-bold text-white">BOT</span>}<time className="text-[11px] text-[var(--discord-text-faint)]">{message.createdAt.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</time></div>
-        <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-[var(--discord-text)]">{assistant ? message.text : <HighlightedMention text={message.text} />}</p>
+        {message.replyTo && <button type="button" aria-label={`Nhảy đến tin nhắn gốc: ${message.replyTo.text}`} onClick={() => onJumpToMessage(message.replyTo!.messageId)} className="mt-2 block max-w-full border-l-2 border-[var(--discord-brand)] pl-2 text-left text-xs leading-4 text-[var(--discord-text-faint)] hover:text-[var(--discord-text)]"><span className="block font-medium text-[#c9cdfb]">Đang trả lời {message.replyTo.author}</span><span className="block truncate">{message.replyTo.text}</span></button>}
+        <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-[var(--discord-text)]"><HighlightedMentions text={message.text} /></p>
         {message.response && <ResponseDetails response={message.response} onOption={onOption} onHandoff={onHandoff} onTicket={onTicket} onSourceOpen={onSourceOpen} />}
       </div>
     </article>
   );
 }
 
-function HighlightedMention({ text }: { text: string }) {
-  const match = text.match(/^(@Trợ lý)(?:\s+|$)(.*)$/iu);
-  if (!match) return text;
-  return <><span className="rounded bg-[var(--discord-brand)]/25 px-1 py-0.5 text-[#c9cdfb]">{match[1]}</span>{match[2] ? ` ${match[2]}` : ""}</>;
+function HighlightedMentions({ text }: { text: string }) {
+  return <>{text.split(/(@Trợ lý|@TA_OnDuty)/u).map((part, index) => part === "@Trợ lý" || part === "@TA_OnDuty" ? <span key={`${part}-${index}`} className="rounded bg-[var(--discord-brand)]/25 px-1 py-0.5 text-[#c9cdfb]">{part}</span> : part)}</>;
 }
 
 function ResponseDetails({ response, onOption, onHandoff, onTicket, onSourceOpen }: { response: AgentResponse; onOption: (value: string) => void; onHandoff: (response: AgentResponse) => void; onTicket: () => void; onSourceOpen: (response: AgentResponse) => void }) {

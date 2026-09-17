@@ -1,4 +1,4 @@
-import type { AgentResponse, DemoScenario, OfficialSource } from "../types";
+import type { AgentResponse, OfficialSource } from "../types";
 
 export const mockOfficialSources: OfficialSource[] = [
   {
@@ -29,14 +29,6 @@ export const mockOfficialSources: OfficialSource[] = [
     ground_truth_id: "ANN_07", title: "Hướng dẫn tra cứu điểm XP và thứ hạng", channel: "#feed", message_id: "M77092", author: "BTC",
     content: "Học viên có thể tra cứu điểm XP tích lũy và Rank của mình bằng lệnh /rank hoặc xem bảng vàng với lệnh /leaderboard users.", published_at: "2026-09-14 22:39", url: null, verified: true,
   },
-];
-
-export const scenarios: DemoScenario[] = [
-  { label: "Có nguồn", question: "Hạn nộp Lab 2 CVAT là khi nào?", tone: "green" },
-  { label: "Mơ hồ", question: "Hạn nộp bài là mấy giờ?", tone: "yellow" },
-  { label: "Chưa công bố", question: "Hạn nộp Lab 4 là ngày nào?", tone: "red" },
-  { label: "Ngoài quyền", question: "Check xem t đã nộp bài codelab chưa", tone: "purple" },
-  { label: "Mâu thuẫn", question: "Email báo 23:59 nhưng Discord báo 18:00, nộp theo giờ nào?", tone: "orange" },
 ];
 
 const common = {

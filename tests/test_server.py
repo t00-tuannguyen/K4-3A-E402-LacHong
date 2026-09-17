@@ -54,6 +54,16 @@ class CoreAiServerTests(unittest.TestCase):
         self.assertEqual(sources[3]["message_id"], "M16114")
         self.assertTrue(sources[3]["verified"])
 
+    def test_evaluation_cases_exposes_the_complete_golden_set(self):
+        response = self.client.get("/api/evaluation/cases")
+
+        self.assertEqual(response.status_code, 200)
+        cases = response.json()["cases"]
+        self.assertEqual(len(cases), 30)
+        self.assertEqual(cases[0]["case_id"], "TC_01")
+        self.assertEqual(cases[0]["expected_action"], "ta_handoff")
+        self.assertNotIn("evaluation_criteria", cases[0])
+
 
 if __name__ == "__main__":
     unittest.main()

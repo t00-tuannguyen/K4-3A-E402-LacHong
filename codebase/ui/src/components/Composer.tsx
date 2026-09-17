@@ -1,10 +1,15 @@
 import { Gift, PlusCircle, Send, Smile } from "lucide-react";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
-export function Composer({ onSend, disabled }: { onSend: (text: string) => void; disabled: boolean }) {
+export function Composer({ onSend, disabled, prefillText, prefillVersion }: { onSend: (text: string) => void; disabled: boolean; prefillText?: string; prefillVersion?: number }) {
   const mention = "@Trợ lý ";
   const [mentionEnabled, setMentionEnabled] = useState(true);
   const [text, setText] = useState("");
+  useEffect(() => {
+    if (!prefillVersion) return;
+    setText(prefillText ?? "");
+    setMentionEnabled(true);
+  }, [prefillText, prefillVersion]);
   const hasMessage = text.trim().length > 0;
   function submit(event: FormEvent) {
     event.preventDefault();

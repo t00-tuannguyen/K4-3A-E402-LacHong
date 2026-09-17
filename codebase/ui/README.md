@@ -22,7 +22,13 @@ VITE_API_MODE=api
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
-The UI sends `POST /api/assist` and fetches the official-source archive from `GET /api/sources`. It does not call Gemini or Discord directly, and no secret belongs in this directory.
+The UI sends `POST /api/assist`, fetches the official-source archive from `GET /api/sources`, and loads the team-only Golden Set from `GET /api/evaluation/cases`. It does not call Gemini or Discord directly, and no secret belongs in this directory.
+
+## Golden Set evaluation panel
+
+In API mode, open **Agent Inspector** from the channel header. The panel lets the team select a group or a case, then run one case or all 30 cases sequentially through the backend. It compares the returned intent, effective action, and citation ID against `eval/golden_set.json`.
+
+This is a review tool, separate from the learner-facing chat. The canonical full evaluation remains `python eval/run_eval.py`; it additionally checks factuality, conciseness, and safety boundaries and writes the report artifacts.
 
 ## CP3 demo path
 

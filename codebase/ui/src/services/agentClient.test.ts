@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockResponseFor, mockOfficialSources } from "../data/mockScenarios";
-import { getOfficialSources, sendAgentMessage } from "./agentClient";
+import { getEvaluationCases, getOfficialSources, sendAgentMessage } from "./agentClient";
 
 beforeEach(() => {
   vi.stubEnv("VITE_API_MODE", "mock");
@@ -66,6 +66,20 @@ describe("mock agent scenarios", () => {
       timestamp: "2026-09-17T03:00:00Z",
     })).resolves.toEqual(expected);
     expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/api/assist", expect.objectContaining({ method: "POST" }));
+  });
+
+  it("loads the Golden Set from the Core AI endpoint in API mode", async () => {
+    vi.stubEnv("VITE_API_MODE", "api");
+    vi.stubEnv("VITE_API_BASE_URL", "http://localhost:8000");
+    const evaluationCase = {
+      case_id: "TC_01", category: "layer_1_no_ground_truth", layer: "Nguồn sự thật", user_query: "Lab 4 khi nào?",
+      expected_intent: "query_deadline_unannounced", expected_action: "ta_handoff", expected_ground_truth_id: null,
+    };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ cases: [evaluationCase] }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(getEvaluationCases()).resolves.toEqual([evaluationCase]);
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/api/evaluation/cases");
   });
 
   it("reports an invalid source archive contract clearly", async () => {

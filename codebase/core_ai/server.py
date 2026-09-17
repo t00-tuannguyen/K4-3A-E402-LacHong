@@ -20,6 +20,7 @@ from codebase.core_ai.assistant import DEFAULT_9ROUTER_MODEL, DEFAULT_MODEL, RAW
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+GOLDEN_SET_PATH = PROJECT_ROOT / "eval" / "golden_set.json"
 load_dotenv(PROJECT_ROOT / ".env")
 
 
@@ -56,6 +57,25 @@ class AssistRequest(BaseModel):
     channel_id: str | None = None
     message_text: str = Field(max_length=10_000)
     timestamp: str | None = None
+
+
+def _golden_set_cases() -> list[dict[str, Any]]:
+    """Return the review-safe fields needed by the internal evaluation panel."""
+    import json
+
+    cases = json.loads(GOLDEN_SET_PATH.read_text(encoding="utf-8"))
+    return [
+        {
+            "case_id": case["case_id"],
+            "category": case["category"],
+            "layer": case["layer"],
+            "user_query": case["user_query"],
+            "expected_intent": case["expected_intent"],
+            "expected_action": case["expected_action"],
+            "expected_ground_truth_id": case.get("expected_ground_truth_id"),
+        }
+        for case in cases
+    ]
 
 
 @app.get("/health")
@@ -99,3 +119,9 @@ def sources() -> dict[str, list[dict[str, Any]]]:
             for source in RAW_SOURCES
         ]
     }
+
+
+@app.get("/api/evaluation/cases")
+def evaluation_cases() -> dict[str, list[dict[str, Any]]]:
+    """Expose the Golden Set to the local team-only evaluation panel."""
+    return {"cases": _golden_set_cases()}
