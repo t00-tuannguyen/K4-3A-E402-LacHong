@@ -1,6 +1,10 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockResponseFor, mockOfficialSources } from "../data/mockScenarios";
 import { getOfficialSources, sendAgentMessage } from "./agentClient";
+
+beforeEach(() => {
+  vi.stubEnv("VITE_API_MODE", "mock");
+});
 
 afterEach(() => {
   vi.unstubAllEnvs();

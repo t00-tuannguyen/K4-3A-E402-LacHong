@@ -45,14 +45,15 @@ export default function App() {
   useEffect(() => { void loadSources(); }, []);
 
   async function send(text: string) {
-    const normalizedText = text.trim().replace(/^@Trợ lý\s*/i, "") ? `@Trợ lý ${text.trim().replace(/^@Trợ lý\s*/i, "")}` : "@Trợ lý";
-    const userMessage: ChatMessage = { id: makeId(), role: "user", text: normalizedText, createdAt: new Date() };
-    const request = { user_id: "D202602628", channel_id: "channel_10", message_text: normalizedText, timestamp: new Date().toISOString() };
+    const messageText = text.trim().replace(/^@Trợ lý\s*/i, "");
+    const displayText = messageText ? `@Trợ lý ${messageText}` : "@Trợ lý";
+    const userMessage: ChatMessage = { id: makeId(), role: "user", text: displayText, createdAt: new Date() };
+    const request = { user_id: "D202602628", channel_id: "channel_10", message_text: messageText, timestamp: new Date().toISOString() };
     setMessages((current) => [...current, userMessage]);
     setLoading(true);
     setError(null);
     setTrace({ request, response: null, phase: "running" });
-    retryText.current = normalizedText;
+    retryText.current = messageText;
     try {
       const response = await sendAgentMessage(request);
       setMessages((current) => [...current, { id: makeId(), role: "assistant", text: response.reply_text, response, createdAt: new Date() }]);

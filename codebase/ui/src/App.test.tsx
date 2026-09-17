@@ -1,7 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
+
+beforeEach(() => {
+  vi.stubEnv("VITE_API_MODE", "mock");
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("Discord assistant UI", () => {
   it("sends a message and renders a grounded citation", async () => {
@@ -11,6 +19,19 @@ describe("Discord assistant UI", () => {
     await user.click(screen.getByLabelText("Gửi"));
     expect(screen.getByRole("status")).toHaveTextContent("đang kiểm tra nguồn");
     expect(await screen.findByRole("button", { name: "Nguồn chính thức · ANN_04" })).toBeInTheDocument();
+  });
+
+  it("keeps the assistant mention in chat but removes it from the agent request", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.type(screen.getByLabelText("Tin nhắn"), "Hạn nộp Lab 2 CVAT là khi nào?");
+    await user.click(screen.getByLabelText("Gửi"));
+    await screen.findByRole("button", { name: "Nguồn chính thức · ANN_04" });
+    await user.click(screen.getByLabelText("Ẩn hiện agent inspector"));
+
+    expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "@Trợ lý Hạn nộp Lab 2 CVAT là khi nào?")).toBeInTheDocument();
+    expect(screen.getByText(/"message_text": "Hạn nộp Lab 2 CVAT là khi nào\?"/)).toBeInTheDocument();
+    expect(screen.queryByText(/"message_text": "@Trợ lý/)).not.toBeInTheDocument();
   });
 
   it("navigates to the mock source channel when a citation is clicked", async () => {
