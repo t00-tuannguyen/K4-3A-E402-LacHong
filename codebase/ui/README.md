@@ -22,7 +22,7 @@ VITE_API_MODE=api
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
-The UI sends `POST /api/v1/agent/message`. It does not call Gemini or Discord directly, and no secret belongs in this directory.
+The UI sends `POST /api/assist` and fetches the official-source archive from `GET /api/sources`. It does not call Gemini or Discord directly, and no secret belongs in this directory.
 
 ## CP3 demo path
 
@@ -30,7 +30,8 @@ The UI sends `POST /api/v1/agent/message`. It does not call Gemini or Discord di
 2. Show the source citation for Lab 02.
 3. Show clarification chips, then click `Lab 02 CVAT`.
 4. Show the handoff button and confirmation toast.
-5. Switch to API mode once the backend is ready and record the 30-second real-AI call.
+5. Start the Core AI service from the repository root with `python -m uvicorn codebase.core_ai.server:app --reload`.
+6. Switch to API mode and record the 30-second real-AI call. The UI uses the backend response and backend source archive; it has no production citations hardcoded in API mode.
 
 ## Checks
 

@@ -10,16 +10,16 @@ describe("Discord assistant UI", () => {
     await user.type(screen.getByLabelText("Tin nhắn"), "Hạn nộp Lab 2 CVAT là khi nào?");
     await user.click(screen.getByLabelText("Gửi"));
     expect(screen.getByRole("status")).toHaveTextContent("đang kiểm tra nguồn");
-    expect(await screen.findByText("Thông báo chính thức — Lab 02 CVAT")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Nguồn chính thức · ANN_04" })).toBeInTheDocument();
   });
 
   it("navigates to the mock source channel when a citation is clicked", async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole("button", { name: "Có nguồn" }));
-    await user.click(await screen.findByRole("button", { name: "Thông báo chính thức — Lab 02 CVAT" }));
+    await user.click(await screen.findByRole("button", { name: "Nguồn chính thức · ANN_04" }));
     expect(screen.getAllByText("nguon-chinh-thuc").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText("Thông báo chính thức — Lab 02 CVAT · M49744")).toBeInTheDocument();
+    expect(screen.getByText("Thông báo chuẩn bị và hạn nộp Lab 02 CVAT · M16114")).toBeInTheDocument();
     expect(screen.getByText(/23:59 ngày 16\/09\/2026/)).toBeInTheDocument();
   });
 
@@ -35,7 +35,15 @@ describe("Discord assistant UI", () => {
     render(<App />);
     await user.click(screen.getByRole("button", { name: "Chưa công bố" }));
     await user.click(await screen.findByRole("button", { name: "Chuyển cho TA hỗ trợ" }));
-    expect(screen.getByRole("status")).toHaveTextContent("@TA_OnDuty");
+    expect(screen.getByRole("status")).toHaveTextContent("handoff packet");
+  });
+
+  it("shows ticket guidance for an out-of-scope request", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "Ngoài quyền" }));
+    await user.click(await screen.findByRole("button", { name: "Mở hướng dẫn /ticket create" }));
+    expect(screen.getByRole("status")).toHaveTextContent("#ticket-support");
   });
 
   it("keeps scenarios directly above the composer and shows an editable assistant mention", () => {

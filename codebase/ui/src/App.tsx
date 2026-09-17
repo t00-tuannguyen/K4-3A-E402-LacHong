@@ -1,18 +1,12 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DiscordChrome } from "./components/DiscordChrome";
 import { Composer } from "./components/Composer";
 import { MessageBubble } from "./components/MessageBubble";
 import { ScenarioBar } from "./components/ScenarioBar";
 import { AgentInspector, type AgentTrace } from "./components/AgentInspector";
 import { scenarios } from "./data/mockScenarios";
-import { sendAgentMessage } from "./services/agentClient";
-import type { AgentResponse, ChatMessage } from "./types";
-
-const officialSources = [
-  { title: "Thông báo chính thức — Lab 02 CVAT", channel: "#thong-bao-chung", message_id: "M49744", text: "Hạn nộp bài tập Lab 02 (CVAT) là 23:59 ngày 16/09/2026 trên hệ thống VLearn.", date: "13/09/2026" },
-  { title: "Thông báo chính thức — Lab 01 Codelab", channel: "#thong-bao-chung", message_id: "M49731", text: "Lab 01 Codelab mở trên VLearn. Hạn nộp được tính theo mốc hiển thị trong thông báo ghim.", date: "12/09/2026" },
-  { title: "Thông báo — Ghép đội tự do", channel: "#thong-bao-chung", message_id: "M49688", text: "Học viên có thể ghép đội tự do theo hướng dẫn trong kênh hỗ trợ học tập.", date: "11/09/2026" },
-];
+import { getOfficialSources, sendAgentMessage } from "./services/agentClient";
+import type { AgentResponse, ChatMessage, HandoffPacket, OfficialSource } from "./types";
 
 const welcome: ChatMessage = {
   id: "welcome",
@@ -34,8 +28,21 @@ export default function App() {
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [trace, setTrace] = useState<AgentTrace>({ request: null, response: null, phase: "idle" });
   const [activeChannel, setActiveChannel] = useState<"tro-ly-hoi-dap" | "nguon-chinh-thuc">("tro-ly-hoi-dap");
-  const [sourceMessage, setSourceMessage] = useState<AgentResponse | null>(null);
+  const [sources, setSources] = useState<OfficialSource[]>([]);
+  const [sourceError, setSourceError] = useState<string | null>(null);
+  const [selectedSourceId, setSelectedSourceId] = useState<string | undefined>();
   const retryText = useRef<string | null>(null);
+
+  async function loadSources() {
+    try {
+      setSourceError(null);
+      setSources(await getOfficialSources());
+    } catch (caught) {
+      setSourceError(caught instanceof Error ? caught.message : "Không thể tải nguồn chính thức");
+    }
+  }
+
+  useEffect(() => { void loadSources(); }, []);
 
   async function send(text: string) {
     const normalizedText = text.trim().replace(/^@Trợ lý\s*/i, "") ? `@Trợ lý ${text.trim().replace(/^@Trợ lý\s*/i, "")}` : "@Trợ lý";
@@ -59,15 +66,33 @@ export default function App() {
     }
   }
 
-  function handoff() {
-    setToast("Đã tạo yêu cầu hỗ trợ và tag @TA_OnDuty trong bản demo.");
+  function handoff(message: ChatMessage, response: AgentResponse) {
+    const packet: HandoffPacket = {
+      handoff_id: makeId(),
+      created_at: new Date().toISOString(),
+      user_id: "D202602628",
+      channel_id: "channel_10",
+      original_message: message.text,
+      intent: response.intent,
+      status: response.status,
+      confidence_score: response.confidence_score,
+      reason: response.handoff_metadata.reason,
+      source_citation: response.source_citation,
+    };
+    setTrace((current) => ({ ...current, handoff: packet }));
+    setToast("Đã tạo handoff packet cho @TA_OnDuty trong bản demo.");
+    window.setTimeout(() => setToast(null), 3000);
+  }
+
+  function showTicketGuidance() {
+    setToast("Mở #ticket-support và dùng lệnh /ticket create.");
     window.setTimeout(() => setToast(null), 3000);
   }
 
   return (
     <DiscordChrome theme={theme} onToggleTheme={() => setTheme((current) => current === "dark" ? "light" : "dark")} inspectorOpen={inspectorOpen} onToggleInspector={() => setInspectorOpen((current) => !current)} inspector={<AgentInspector trace={trace} />} activeChannel={activeChannel} onChannelSelect={setActiveChannel}>
       <section aria-label="Lịch sử trò chuyện" className="flex-1 overflow-y-auto py-3">
-        {activeChannel === "nguon-chinh-thuc" ? <SourceChannelMessages selectedId={sourceMessage?.source_citation?.message_id} /> : messages.map((message) => <MessageBubble key={message.id} message={message} onOption={send} onHandoff={handoff} onSourceOpen={(response) => { setSourceMessage(response); setActiveChannel("nguon-chinh-thuc"); }} />)}
+        {activeChannel === "nguon-chinh-thuc" ? <SourceChannelMessages sources={sources} selectedId={selectedSourceId} error={sourceError} onRetry={loadSources} /> : messages.map((message) => <MessageBubble key={message.id} message={message} onOption={send} onHandoff={(response) => handoff(message, response)} onTicket={showTicketGuidance} onSourceOpen={(response) => { setSelectedSourceId(response.source_citation?.ground_truth_id); setActiveChannel("nguon-chinh-thuc"); }} />)}
         {loading && <div role="status" className="flex items-center gap-2 px-16 py-3 text-xs text-[var(--discord-text-faint)]"><span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" /> Trợ lý đang kiểm tra nguồn…</div>}
         {error && <div role="alert" className="mx-4 mt-2 flex items-center justify-between rounded border border-red-700 bg-red-950/40 p-3 text-sm text-red-200"><span>{error}</span><button onClick={() => retryText.current && send(retryText.current)} className="rounded bg-red-600 px-3 py-1 text-xs text-white">Thử lại</button></div>}
       </section>
@@ -78,6 +103,7 @@ export default function App() {
   );
 }
 
-function SourceChannelMessages({ selectedId }: { selectedId?: string }) {
-  return <div className="mx-auto w-full max-w-3xl space-y-3">{officialSources.map((source) => <article key={source.message_id} className={`rounded-lg border p-5 ${selectedId === source.message_id ? "border-[var(--discord-brand)] bg-[var(--discord-bg-elevated)] ring-1 ring-[var(--discord-brand)]/40" : "border-[var(--discord-border)] bg-[var(--discord-bg-elevated)]"}`}><div className="flex gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--discord-brand)] text-xs font-bold text-white">BTC</div><div><div className="flex items-center gap-2"><strong className="text-sm text-[var(--discord-text-strong)]">Ban tổ chức</strong><time className="text-[11px] text-[var(--discord-text-faint)]">{source.date}</time></div><p className="mt-1 text-xs text-[var(--discord-text-faint)]">{source.channel}</p><p className="mt-2 text-sm leading-6 text-[var(--discord-text)]">{source.text}</p><p className="mt-3 text-xs text-[var(--discord-text-faint)]">{source.title} · {source.message_id}</p></div></div></article>)}</div>;
+function SourceChannelMessages({ sources, selectedId, error, onRetry }: { sources: OfficialSource[]; selectedId?: string; error: string | null; onRetry: () => void }) {
+  if (error) return <div className="mx-auto max-w-xl rounded border border-red-700 bg-red-950/40 p-4 text-sm text-red-200">{error}<button onClick={onRetry} className="ml-3 rounded bg-red-600 px-3 py-1 text-xs text-white">Thử lại</button></div>;
+  return <div className="mx-auto w-full max-w-3xl space-y-3">{sources.map((source) => <article key={source.ground_truth_id} className={`rounded-lg border p-5 ${selectedId === source.ground_truth_id ? "border-[var(--discord-brand)] bg-[var(--discord-bg-elevated)] ring-1 ring-[var(--discord-brand)]/40" : "border-[var(--discord-border)] bg-[var(--discord-bg-elevated)]"}`}><div className="flex gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--discord-brand)] text-xs font-bold text-white">{source.author}</div><div><div className="flex items-center gap-2"><strong className="text-sm text-[var(--discord-text-strong)]">{source.author}</strong><time className="text-[11px] text-[var(--discord-text-faint)]">{source.published_at}</time></div><p className="mt-1 text-xs text-[var(--discord-text-faint)]">{source.channel}</p><p className="mt-2 text-sm leading-6 text-[var(--discord-text)]">{source.content}</p><p className="mt-3 text-xs text-[var(--discord-text-faint)]">{source.title} · {source.message_id}</p></div></div></article>)}{!sources.length && <p className="text-center text-sm text-[var(--discord-text-faint)]">Đang tải nguồn chính thức…</p>}</div>;
 }

@@ -1,11 +1,12 @@
 import { CheckCircle2, Circle, Loader2 } from "lucide-react";
-import type { AgentRequest, AgentResponse } from "../types";
+import type { AgentRequest, AgentResponse, HandoffPacket } from "../types";
 
 export type AgentTrace = {
   request: AgentRequest | null;
   response: AgentResponse | null;
   phase: "idle" | "running" | "done" | "error";
   error?: string;
+  handoff?: HandoffPacket;
 };
 
 export function AgentInspector({ trace }: { trace: AgentTrace }) {
@@ -36,6 +37,7 @@ export function AgentInspector({ trace }: { trace: AgentTrace }) {
       {!trace.request && <p className="rounded border border-dashed border-[var(--discord-text-subtle)] p-3 text-xs text-[var(--discord-text-faint)]">Gửi một câu hỏi để xem request, các bước xử lý và response của agent.</p>}
       {trace.request && <JsonBlock title="Request" value={trace.request} />}
       {trace.response && <JsonBlock title="Response" value={trace.response} />}
+      {trace.handoff && <JsonBlock title="TA handoff packet" value={trace.handoff} />}
       {trace.error && <div className="mt-3 rounded bg-red-950/40 p-3 text-xs text-red-300">{trace.error}</div>}
     </div>
   );

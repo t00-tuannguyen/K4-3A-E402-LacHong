@@ -16,7 +16,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from codebase.core_ai.assistant import DEFAULT_MODEL, answer
+from codebase.core_ai.assistant import DEFAULT_MODEL, RAW_SOURCES, answer
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -44,9 +44,9 @@ _configure_logging()
 app = FastAPI(title="LacHong Core AI", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # The CP3 UI is a local static HTML file.
+    allow_origins=["*"],  # The CP3 UI is a local frontend demo.
     allow_credentials=False,
-    allow_methods=["POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
 
@@ -71,3 +71,24 @@ def health() -> dict[str, Any]:
 @app.post("/api/assist")
 def assist(request: AssistRequest) -> dict[str, Any]:
     return answer(request.model_dump())
+
+
+@app.get("/api/sources")
+def sources() -> dict[str, list[dict[str, Any]]]:
+    """Return the public official-source archive used for grounded answers."""
+    return {
+        "sources": [
+            {
+                "ground_truth_id": source["id"],
+                "title": source["title"],
+                "channel": source["source_channel"],
+                "message_id": source["source_msg_id"],
+                "author": source["author"],
+                "content": source["content"],
+                "published_at": source["posted_at"],
+                "url": None,
+                "verified": True,
+            }
+            for source in RAW_SOURCES
+        ]
+    }
