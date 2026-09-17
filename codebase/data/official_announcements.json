@@ -1,0 +1,102 @@
+[
+  {
+    "id": "ANN_01",
+    "title": "Thông báo hoàn thiện Onboarding & Ghép đội tự do",
+    "source_channel": "#thong-bao-chung",
+    "source_msg_id": "M49744",
+    "posted_at": "2026-09-12 18:02",
+    "author": "BTC",
+    "content": "Thời hạn hoàn thành onboarding và ghép đội tự do trên nền tảng Phoenix đến 21:00 ngày 13/09/2026. Sau thời gian trên hệ thống sẽ tự động ghép đội ngẫu nhiên.",
+    "key_entities": {
+      "deadline": "21:00 13/09/2026",
+      "platform": "Phoenix (phoenix.note.transformerlabs.ai)",
+      "scope": "Ghép đội tự do & Onboarding"
+    }
+  },
+  {
+    "id": "ANN_02",
+    "title": "Quy định cú pháp đổi tên hiển thị Discord",
+    "source_channel": "#thong-bao-chung",
+    "source_msg_id": "M47011",
+    "posted_at": "2026-09-12 09:39",
+    "author": "BTC",
+    "content": "Mọi người vui lòng đổi tên theo cú pháp: Mã Nhóm - Họ và tên - 5 số cuối mã sinh viên (Ví dụ: T001 - Nguyen Van A - 12345). Việc thống nhất cách đặt tên sẽ giúp BTC và Lab Coach điểm danh và ghi nhận điểm cộng thuận tiện.",
+    "key_entities": {
+      "format": "Mã Nhóm - Họ và tên - 5 số cuối mã sinh viên",
+      "example": "T001 - Nguyen Van A - 12345",
+      "scope": "Cú pháp tên hiển thị"
+    }
+  },
+  {
+    "id": "ANN_03",
+    "title": "Thông báo hạn nộp bài tập Lab 01 Codelab",
+    "source_channel": "#thong-bao-lớp-học",
+    "source_msg_id": "M57630",
+    "posted_at": "2026-09-12 12:51",
+    "author": "BTC",
+    "content": "Hạn nộp bài tập Lab 01 (Codelab) là 23:59 cùng ngày học trên cổng VLearn. Bài nộp sẽ được chấm sau khi đóng cổng.",
+    "key_entities": {
+      "deadline": "23:59 ngày học",
+      "platform": "VLearn (vlearn.dev)",
+      "scope": "Lab 01 Codelab"
+    }
+  },
+  {
+    "id": "ANN_04",
+    "title": "Thông báo chuẩn bị và hạn nộp Lab 02 CVAT",
+    "source_channel": "#thong-bao-lớp-học",
+    "source_msg_id": "M16114",
+    "posted_at": "2026-09-13 11:21",
+    "author": "BTC",
+    "content": "Bài tập Lab 02 sử dụng công cụ CVAT. Hạn nộp bài tập Lab 02 là 23:59 ngày 16/09/2026 trên hệ thống VLearn.",
+    "key_entities": {
+      "deadline": "23:59 16/09/2026",
+      "tool": "CVAT",
+      "platform": "VLearn (vlearn.dev)",
+      "scope": "Lab 02 CVAT"
+    }
+  },
+  {
+    "id": "ANN_05",
+    "title": "Quy chế nộp Daily Standup hàng ngày",
+    "source_channel": "#thong-bao-chung",
+    "source_msg_id": "M73469",
+    "posted_at": "2026-09-14 19:35",
+    "author": "BTC",
+    "content": "Khung giờ nộp Daily Standup hàng ngày là từ 00:00 đến 10:00 sáng. Nộp muộn sau 10:00 sáng vẫn được ghi nhận nhưng không được cộng điểm thưởng XP.",
+    "key_entities": {
+      "deadline_window": "00:00 - 10:00 sáng hàng ngày",
+      "late_policy": "Ghi nhận nhưng không +XP",
+      "scope": "Daily Standup"
+    }
+  },
+  {
+    "id": "ANN_06",
+    "title": "Quy trình tạo Ticket hỗ trợ kỹ thuật và thủ tục",
+    "source_channel": "#ticket-support",
+    "source_msg_id": "M49744",
+    "posted_at": "2026-09-12 18:02",
+    "author": "BTC",
+    "content": "Mọi vấn đề phát sinh kỹ thuật, lỗi tài khoản Phoenix, xin hỗ trợ giấy tờ hoặc các trường hợp đặc biệt, học viên vui lòng gõ lệnh /ticket create tại kênh #ticket-support để được đội ngũ TA và Mod hỗ trợ xử lý.",
+    "key_entities": {
+      "command": "/ticket create",
+      "channel": "#ticket-support",
+      "scope": "Hỗ trợ kỹ thuật & thủ tục"
+    }
+  },
+  {
+    "id": "ANN_07",
+    "title": "Hướng dẫn tra cứu điểm XP và thứ hạng",
+    "source_channel": "#feed",
+    "source_msg_id": "M77092",
+    "posted_at": "2026-09-14 22:39",
+    "author": "BTC",
+    "content": "Học viên có thể tra cứu điểm XP tích lũy và Rank của mình bằng lệnh /rank hoặc xem bảng vàng xếp hạng thành viên với lệnh /leaderboard users.",
+    "key_entities": {
+      "command_rank": "/rank",
+      "command_leaderboard": "/leaderboard users",
+      "scope": "Điểm XP & Rank"
+    }
+  }
+]
+

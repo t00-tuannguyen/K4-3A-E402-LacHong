@@ -1,0 +1,31 @@
+# Environment & Secrets
+.env
+*.env
+.env.*
+secrets.json
+
+# Internal Team Guides
+TEAM-GUIDE.md
+
+# Data & Packs (Không commit dữ liệu thật lên repo công khai)
+/data/
+data/discord-pack/
+data/vlearn-pack/
+data/studio-pack/
+*.csv
+k4_messages.csv
+!codebase/data/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
