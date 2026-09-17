@@ -218,6 +218,21 @@ class CoreAiContractTests(unittest.TestCase):
         self.assertEqual(result["processing_metadata"]["intent_provider"], "9router")
         classify.assert_called_once()
 
+    @patch("codebase.core_ai.assistant._9router_classification")
+    def test_openai_compatible_provider_alias_is_supported(self, classify):
+        classify.return_value = {
+            "intent": "query_deadline",
+            "subject": "lab_02",
+            "is_ambiguous": False,
+            "needs_human": False,
+            "reason": "deadline question",
+        }
+        with patch.dict(os.environ, {"LLM_PROVIDER": "openai_compatible"}, clear=False):
+            result = answer({"message_text": "Hạn nộp Lab 2?"}, use_gemini=True)
+
+        self.assertEqual(result["processing_metadata"]["intent_provider"], "openai_compatible")
+        classify.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

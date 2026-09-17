@@ -391,7 +391,7 @@ def _classify(text: str, use_gemini: bool) -> tuple[str, str]:
     if use_gemini:
         try:
             provider = os.getenv("LLM_PROVIDER", "gemini").lower()
-            if provider == "9router":
+            if provider in {"9router", "openai_compatible"}:
                 intent = str(_9router_classification(text).get("intent", "unknown"))
             elif provider == "gemini":
                 intent = str(_gemini_classification(text).get("intent", "unknown"))

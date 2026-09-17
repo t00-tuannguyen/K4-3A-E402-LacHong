@@ -69,9 +69,9 @@ def health() -> dict[str, Any]:
         "status": "ok",
         "service": "lac-hong-core-ai",
         "llm_provider": provider,
-        "llm_configured": nine_router_configured if provider == "9router" else bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
+        "llm_configured": nine_router_configured if provider in {"9router", "openai_compatible"} else bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
         "gemini_configured": bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
-        "model": (os.getenv("NINEROUTER_MODEL") or os.getenv("NINE_ROUTER_MODEL") or os.getenv("OPENAI_MODEL") or DEFAULT_9ROUTER_MODEL) if provider == "9router" else os.getenv("GEMINI_MODEL", DEFAULT_MODEL),
+        "model": (os.getenv("NINEROUTER_MODEL") or os.getenv("NINE_ROUTER_MODEL") or os.getenv("OPENAI_MODEL") or DEFAULT_9ROUTER_MODEL) if provider in {"9router", "openai_compatible"} else os.getenv("GEMINI_MODEL", DEFAULT_MODEL),
     }
 
 
