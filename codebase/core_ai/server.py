@@ -16,7 +16,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from codebase.core_ai.assistant import DEFAULT_MODEL, RAW_SOURCES, answer
+from codebase.core_ai.assistant import DEFAULT_9ROUTER_MODEL, DEFAULT_MODEL, RAW_SOURCES, answer
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -60,11 +60,18 @@ class AssistRequest(BaseModel):
 
 @app.get("/health")
 def health() -> dict[str, Any]:
+    provider = os.getenv("LLM_PROVIDER", "gemini").lower()
+    nine_router_configured = bool(
+        (os.getenv("NINEROUTER_API_KEY") or os.getenv("NINE_ROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")) and
+        (os.getenv("NINEROUTER_BASE_URL") or os.getenv("NINE_ROUTER_BASE_URL") or os.getenv("OPENAI_BASE_URL"))
+    )
     return {
         "status": "ok",
         "service": "lac-hong-core-ai",
+        "llm_provider": provider,
+        "llm_configured": nine_router_configured if provider == "9router" else bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
         "gemini_configured": bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
-        "model": os.getenv("GEMINI_MODEL", DEFAULT_MODEL),
+        "model": (os.getenv("NINEROUTER_MODEL") or os.getenv("NINE_ROUTER_MODEL") or os.getenv("OPENAI_MODEL") or DEFAULT_9ROUTER_MODEL) if provider == "9router" else os.getenv("GEMINI_MODEL", DEFAULT_MODEL),
     }
 
 

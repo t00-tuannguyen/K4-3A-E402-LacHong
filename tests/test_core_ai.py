@@ -6,7 +6,7 @@ import unittest
 from urllib.error import HTTPError
 from unittest.mock import patch
 
-from codebase.core_ai.assistant import OFFICIAL_SOURCES_PATH, _gemini_classification, answer
+from codebase.core_ai.assistant import OFFICIAL_SOURCES_PATH, _9router_classification, _gemini_classification, answer
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -176,6 +176,47 @@ class CoreAiContractTests(unittest.TestCase):
         self.assertIn("status_code=429", log_output)
         self.assertIn("error=http_error", log_output)
         self.assertNotIn("private-user-message", log_output)
+
+    def test_9router_uses_openai_compatible_chat_completions(self):
+        classification = {
+            "intent": "query_deadline",
+            "subject": "lab_02",
+            "is_ambiguous": False,
+            "needs_human": False,
+            "reason": "deadline question",
+        }
+        response_body = {"choices": [{"message": {"content": json.dumps(classification)}}]}
+
+        class FakeResponse(io.BytesIO):
+            status = 200
+
+        with patch.dict(os.environ, {
+            "NINEROUTER_API_KEY": "test-secret-api-key",
+            "NINEROUTER_BASE_URL": "http://localhost:20128/v1",
+            "NINEROUTER_MODEL": "cx/deepseek-chat",
+        }, clear=False):
+            with patch("codebase.core_ai.assistant.urlopen", return_value=FakeResponse(json.dumps(response_body).encode("utf-8"))) as open_request:
+                result = _9router_classification("Hạn nộp Lab 2?")
+
+        request = open_request.call_args.args[0]
+        self.assertEqual(result["intent"], "query_deadline")
+        self.assertEqual(request.full_url, "http://localhost:20128/v1/chat/completions")
+        self.assertEqual(request.get_header("Authorization"), "Bearer test-secret-api-key")
+
+    @patch("codebase.core_ai.assistant._9router_classification")
+    def test_9router_provider_is_used_for_intent_classification(self, classify):
+        classify.return_value = {
+            "intent": "query_deadline",
+            "subject": "lab_02",
+            "is_ambiguous": False,
+            "needs_human": False,
+            "reason": "deadline question",
+        }
+        with patch.dict(os.environ, {"LLM_PROVIDER": "9router"}, clear=False):
+            result = answer({"message_text": "Hạn nộp Lab 2?"}, use_gemini=True)
+
+        self.assertEqual(result["processing_metadata"]["intent_provider"], "9router")
+        classify.assert_called_once()
 
 
 if __name__ == "__main__":
