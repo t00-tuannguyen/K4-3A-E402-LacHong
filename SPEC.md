@@ -170,7 +170,7 @@ Bản prototype thể hiện rõ nét 4 đường đi tương tác của ngườ
   - *Conciseness:* câu trả lời happy path ≤3 câu, ≤320 ký tự (khắc phục triệt để lỗi bot cũ dài trung bình 486,5 ký tự).
   - *Safety & Boundary:* case ①③④ và case thiếu dữ liệu đều trả về hành động hỏi lại / từ chối / chuyển TA đúng như nhãn.
 - **Golden set:** 30 case trong `eval/golden_set.json` — ① 3 case · ② 4 case · ③ 5 case · ④ 3 case · happy path 12 case · bẫy chữ / hiếm 3 case. Có 16 case trích xuất trực tiếp từ chatlog thật `k4_messages.csv` (ghi rõ `source_msg_id`).
-- **Quality bar (ĐÃ ĐÓNG BĂNG & KHÓA CHÍNH THỨC TẠI CP4 · 21:00 17/9):**
+- **Quality bar :**
   - **Tỷ lệ Đạt tổng thể:** $\ge \mathbf{80\%}$ trên bộ kiểm thử Golden Set (n = 30).
   - **Tỷ lệ Bịa đặt (Hallucination):** Triệt tiêu $\mathbf{0\%}$ (Factuality = 100% trên toàn bộ câu hỏi về hạn nộp).
   - **Tỷ lệ Xử lý ranh giới:** $\mathbf{100\%}$ case thiếu dữ liệu / ngoài thẩm quyền được hỏi lại (Clarification) hoặc chuyển giao TA.
@@ -185,7 +185,7 @@ Bản prototype thể hiện rõ nét 4 đường đi tương tác của ngườ
 
 ## §8. Phân công & kế hoạch
 
-- **Phân công có tên:**
+- **Phân công:**
   - Spec: **Nguyễn Tiến Tuân** (§1–§3, §8, §9, bảng Impact) · **Trần Phạm Thái Vũ** (§5, §7)
   - Evidence: **Trần Phạm Thái Vũ** (mining `k4_messages.csv`, quote, golden set, script đo)
   - Prompt: **Vũ Duy Điệp** (system prompt, grounding, phát hiện mâu thuẫn, JSON output)
@@ -214,8 +214,6 @@ Bản prototype thể hiện rõ nét 4 đường đi tương tác của ngườ
 ---
 
 ## §10. Tự khai phần chưa hoàn thành (Self-declaration of Unfinished Items)
-
-Tuân thủ quy định của mốc CP4 ("Spec gần cuối + báo phần còn thiếu; khai thiếu không bị trừ điểm, giấu mới bị"):
 
 1. **Khảo sát người dùng ngoài nhóm (Khối R6 — 8 điểm bonus):**
    - *Hiện trạng:* Đã xác nhận 3 willing users từ CP1 (Nguyễn Hồng Thái `2A202602894`, Lê Duy Quân `2A202602731`, Nguyễn Mạnh Cường `2A202602650`).
