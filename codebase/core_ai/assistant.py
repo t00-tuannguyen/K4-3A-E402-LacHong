@@ -527,7 +527,7 @@ def answer(request: dict[str, Any], *, use_gemini: bool = True) -> dict[str, Any
             return _response(
                 intent="request_modify_attendance", status="rejected", confidence=0.99,
                 reply="Mình không có quyền kiểm tra hoặc sửa dữ liệu điểm danh. Bạn hãy liên hệ Lab Coach của buổi học hoặc mở ticket để được hỗ trợ.",
-                source=attendance_source, interactive_type="button_ticket",
+                interactive_type="button_ticket",
                 options=[{"label": "Mở hướng dẫn /ticket create", "action": "show_ticket_help"}],
                 need_ta=True, reason="outside_authority",
             )
