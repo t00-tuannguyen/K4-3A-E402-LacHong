@@ -1,8 +1,10 @@
 import os
+from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from codebase.discord_bot.config import BotConfig
+from codebase.discord_bot.interactions import DiscordAssistant
 from codebase.discord_bot.links import source_jump_url
 
 
@@ -34,6 +36,27 @@ class DiscordSourceLinkTests(unittest.TestCase):
 
     def test_missing_mapping_does_not_create_fake_url(self):
         self.assertIsNone(source_jump_url(10, {"ground_truth_id": "ANN_04"}, {}))
+
+
+class DiscordReplyTests(unittest.IsolatedAsyncioTestCase):
+    async def test_mention_response_replies_to_the_original_message(self):
+        interaction = SimpleNamespace(
+            followup=SimpleNamespace(send=AsyncMock()),
+        )
+        source_message = SimpleNamespace(reply=AsyncMock())
+
+        await DiscordAssistant._send_response(
+            interaction,
+            "Câu trả lời có nguồn",
+            source_message=source_message,
+        )
+
+        source_message.reply.assert_awaited_once_with(
+            content="Câu trả lời có nguồn",
+            view=None,
+            mention_author=False,
+        )
+        interaction.followup.send.assert_not_awaited()
 
 
 if __name__ == "__main__":
