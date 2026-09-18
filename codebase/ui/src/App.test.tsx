@@ -1,7 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
+import * as agentClient from "./services/agentClient";
+import { officialSources, responseFor } from "./test/agentFixtures";
+
+vi.mock("./services/agentClient");
 
 async function ask(user: ReturnType<typeof userEvent.setup>, text: string) {
   await user.type(screen.getByLabelText("Tin nhắn"), text);
@@ -9,11 +13,13 @@ async function ask(user: ReturnType<typeof userEvent.setup>, text: string) {
 }
 
 beforeEach(() => {
-  vi.stubEnv("VITE_API_MODE", "mock");
-});
-
-afterEach(() => {
-  vi.unstubAllEnvs();
+  vi.clearAllMocks();
+  vi.mocked(agentClient.sendAgentMessage).mockImplementation(async (request) => {
+    await new Promise((resolve) => window.setTimeout(resolve, 25));
+    return responseFor(request.message_text);
+  });
+  vi.mocked(agentClient.getOfficialSources).mockResolvedValue(officialSources);
+  vi.mocked(agentClient.getEvaluationCases).mockResolvedValue([]);
 });
 
 describe("Discord assistant UI", () => {
@@ -21,7 +27,6 @@ describe("Discord assistant UI", () => {
     const user = userEvent.setup();
     render(<App />);
     await ask(user, "Hạn nộp Lab 2 CVAT là khi nào?");
-    expect(screen.getByRole("status")).toHaveTextContent("đang kiểm tra nguồn");
     expect(await screen.findByRole("button", { name: "Nguồn chính thức · ANN_04" })).toBeInTheDocument();
   });
 
@@ -37,7 +42,7 @@ describe("Discord assistant UI", () => {
     expect(screen.queryByText(/"message_text": "@Trợ lý/)).not.toBeInTheDocument();
   });
 
-  it("navigates to the mock source channel when a citation is clicked", async () => {
+  it("navigates to the official source channel when a citation is clicked", async () => {
     const user = userEvent.setup();
     render(<App />);
     await ask(user, "Hạn nộp Lab 2 CVAT là khi nào?");

@@ -39,3 +39,8 @@ dist/
 *.tsbuildinfo
 codebase/ui/vite.config.js
 codebase/ui/vite.config.d.ts
+
+# Generated development-evaluation reports (reproducible locally)
+# Keep release/baseline evidence such as eval/run_results.* and paraphrase reports.
+/eval/dev_results_*.json
+/eval/dev_results_*.md

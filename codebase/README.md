@@ -10,10 +10,13 @@ This repository is a coursework prototype for a grounded Discord logistics assis
 |---|---|
 | `core_ai/assistant.py` | Intent classification, deterministic guardrails, grounding, and `AgentResponse` construction. |
 | `core_ai/server.py` | FastAPI HTTP adapter: `/health`, `/api/assist`, `/api/sources`, `/api/evaluation/cases`. |
-| `data/official_announcements.json` | Public, mock official announcement archive used for citations. |
+| `data/official_announcements.json` | Controlled official-announcement fixture used for retrieval and citations. |
 | `ui/` | React/Vite Discord-style client. Read `ui/README.md` before changing UI behavior. |
-| `../eval/golden_set.json` | The backend-owned 30-case evaluation set. |
-| `../eval/run_eval.py` | Canonical full evaluation runner and report writer. |
+| `../eval/dev_set.json` | The 15-case development set exposed to the local team evaluation panel. |
+| `../eval/eval_set.json` | The 15-case sealed release evaluation set; never expose it through the UI API. |
+| `../eval/golden_set.json` | Frozen 30-case source backup for historical comparison; not used by the runner or UI. |
+| `../eval/paraphrase_set.json` | 30 unseen wording variants for retrieval/decision generalization checks. |
+| `../eval/run_eval.py` | Evaluation runner; defaults to the sealed `eval_set.json`. |
 
 ## Run locally
 
@@ -32,7 +35,11 @@ npm run dev
 
 ## API ownership
 
-The frontend sends learner requests only to `POST /api/assist`. Backend-owned source data and evaluation cases are exposed through GET endpoints. Do not copy the Golden Set into a second frontend fixture; load it from `/api/evaluation/cases` in API mode.
+The frontend sends learner requests only to `POST /api/assist`. Backend-owned source data and **Dev Set** cases are exposed through GET endpoints. The sealed Eval Set is never served to the UI. Do not copy the sealed set or assistant logic into a frontend fixture.
+
+## Evaluation protocol
+
+Use `python eval/run_eval.py --dataset dev --offline` during development. `python eval/run_eval.py` defaults to the sealed `eval_set.json` for release measurement. **Do not modify rules, retrieval terms, or prompts from an Eval Set result**; record the result and investigate only with independent evidence. See [`../eval/README.md`](../eval/README.md) for allocation and commands.
 
 ## Safety invariants
 

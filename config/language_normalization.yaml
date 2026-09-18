@@ -1,0 +1,29 @@
+version: 1
+
+# Canonicalization happens before every local guardrail, retrieval and routing
+# decision. Entries describe reusable student-language concepts, not test IDs.
+# Adding a new source stays data-only: extend its subject_terms/retrieval_terms;
+# add an alias here only when it is a common orthographic or chat-language form.
+aliases:
+  - canonical: "hạn nộp"
+    variants: ["dl", "deadline", "dead line", "due date", "giờ chót", "gio chot", "chốt lúc nào", "chot luc nao", "close", "đóng cổng", "dong cong"]
+  - canonical: "lab 01"
+    variants: ["lab1", "lab01", "l1", "lab một", "lab mot"]
+  - canonical: "lab 02"
+    variants: ["lab2", "lab02", "l2", "lab hai"]
+  - canonical: "bảng xếp hạng"
+    variants: ["bxh", "bang xep hang", "bảng rank", "bang rank"]
+  - canonical: "ghép đội"
+    variants: ["team", "tìm team", "tim team", "lập team", "lap team"]
+  - canonical: "điểm danh"
+    variants: ["check-in", "check in", "checkin", "attendance", "hiện diện", "hien dien"]
+  - canonical: "link nộp"
+    variants: ["đường dẫn upload", "duong dan upload", "link upload", "đường dẫn nộp", "duong dan nop"]
+  - canonical: "nộp bài"
+    variants: ["upload", "submit", "gửi bài", "gui bai"]
+  - canonical: "gia hạn"
+    variants: ["mở lại cổng", "mo lai cong", "mở cổng", "mo cong", "nộp tiếp", "nop tiep", "nộp bù", "nop bu", "nộp bổ sung", "nop bo sung"]
+  - canonical: "trạng thái nộp"
+    variants: ["đã được nhận", "da duoc nhan", "đã nhận file", "da nhan file", "xác nhận đã nộp", "xac nhan da nop", "lịch sử upload", "lich su upload", "lịch sử nộp", "lich su nop", "submission history"]
+  - canonical: "discord"
+    variants: ["discod", "discrod"]

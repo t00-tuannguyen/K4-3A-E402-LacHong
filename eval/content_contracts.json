@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "scope": "Positive source-fact assertions for answered cases with verified Ground Truth. Safety-only, clarification, handoff, and known-coverage-gap cases are evaluated by their existing action/source/boundary checks.",
+  "matching": "Accent-insensitive substring matching. Every source_fact_group requires at least one listed alternative to appear in the reply.",
+  "cases": {
+    "TC_10": {
+      "source_id": "ANN_04",
+      "source_fact_groups": [["23:59"], ["16/09/2026"]]
+    },
+    "TC_11": {
+      "source_id": "ANN_04",
+      "source_fact_groups": [["23:59"], ["16/09/2026"]]
+    },
+    "TC_12": {
+      "source_id": "ANN_01",
+      "source_fact_groups": [["21:00"], ["13/09/2026"]]
+    },
+    "TC_13": {
+      "source_id": "ANN_01",
+      "source_fact_groups": [["21:00"], ["13/09/2026"]]
+    },
+    "TC_14": {
+      "source_id": "ANN_01",
+      "source_fact_groups": [["21:00"], ["13/09/2026"]]
+    },
+    "TC_15": {
+      "source_id": "ANN_02",
+      "source_fact_groups": [["Mã Nhóm"], ["5 số cuối mã sinh viên"]]
+    },
+    "TC_16": {
+      "source_id": "ANN_06",
+      "source_fact_groups": [["/ticket create"], ["#ticket-support"]]
+    },
+    "TC_17": {
+      "source_id": "ANN_07",
+      "source_fact_groups": [["/rank"], ["/leaderboard users"]]
+    },
+    "TC_18": {
+      "source_id": "ANN_05",
+      "source_fact_groups": [["00:00"], ["10:00"]]
+    },
+    "TC_19": {
+      "source_id": "ANN_03",
+      "source_fact_groups": [["23:59"], ["VLearn"]]
+    }
+  }
+}

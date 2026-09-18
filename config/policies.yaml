@@ -1,0 +1,202 @@
+version: 1
+
+policies:
+  "answer:greeting":
+    status: answered
+    intent: greeting
+    composer: static
+    template: "Chào bạn! Mình hỗ trợ tra cứu hạn nộp, cách nộp bài và thủ tục K4 từ thông báo chính thức."
+    interactive_type: none
+    need_ta: false
+
+  "answer:grounded":
+    status: answered
+    intent_from: source_route
+    intent_by_requested_field:
+      submission_platform: query_submission_location
+    composer: source_field
+    interactive_type: none
+    need_ta: false
+
+  "answer:grounded_false_premise":
+    status: answered
+    intent_from: source_route
+    composer: grounded_false_premise
+    interactive_type: none
+    need_ta: false
+
+  "answer:missing_specific_policy":
+    status: answered
+    intent: query_late_submission_penalty
+    composer: static
+    template: "Kho thông báo chính thức hiện chưa có barem trừ điểm cụ thể cho bài Lab nộp muộn. Bạn hãy dùng /ticket create tại #ticket-support nếu cần TA xác nhận trường hợp cụ thể."
+    interactive_type: button_ticket
+    options:
+      - {label: "Mở hướng dẫn /ticket create", action: "show_ticket_help"}
+    need_ta: true
+    handoff_reason: missing_specific_policy
+
+  "clarify:missing_subject":
+    status: clarification_needed
+    intent_by_missing_slot:
+      assignment: query_deadline_ambiguous
+      submission_target: query_submission_place_ambiguous
+      submission_link: query_submission_link_ambiguous
+      workshop: query_attendance_workshop
+      question: unknown
+    intent: unknown
+    composer: missing_slot
+    templates:
+      assignment: "Bạn đang hỏi hạn nộp của nội dung nào? Hãy chọn một mục để mình đối chiếu thông báo chính thức."
+      submission_target: "Bạn cần nơi hoặc link nộp của nội dung nào? Hãy chọn một mục để mình đối chiếu thông báo chính thức."
+      submission_link: "Bạn cần link nộp của nội dung nào? Hãy chọn một mục để mình đối chiếu thông báo chính thức."
+      workshop: "Quy định đổi tên hỗ trợ việc điểm danh, nhưng mình cần biết bạn đang hỏi workshop hoặc buổi học nào."
+      question: "Bạn hãy nhập câu hỏi về hạn nộp, cách nộp bài hoặc thủ tục K4 nhé."
+    interactive_type: chips
+    options_by_missing_slot:
+      assignment:
+        - {label: "Lab 01 Codelab", value: "Hạn nộp Lab 01 Codelab là khi nào?"}
+        - {label: "Lab 02 CVAT", value: "Hạn nộp Lab 02 CVAT là khi nào?"}
+        - {label: "Ghép đội tự do", value: "Hạn ghép đội tự do là khi nào?"}
+      submission_target:
+        - {label: "Lab 01 Codelab", value: "Nộp Lab 01 Codelab ở đâu?"}
+        - {label: "Lab 02 CVAT", value: "Nộp Lab 02 CVAT ở đâu?"}
+        - {label: "Daily Standup", value: "Nộp Daily Standup ở đâu?"}
+      submission_link:
+        - {label: "Lab 01 Codelab", value: "Cho mình link nộp Lab 01 Codelab"}
+        - {label: "Lab 02 CVAT", value: "Cho mình link nộp Lab 02 CVAT"}
+        - {label: "Daily Standup", value: "Cho mình link nộp Daily Standup"}
+      workshop:
+        - {label: "Liên hệ Lab Coach", value: "Tôi cần liên hệ Lab Coach về điểm danh"}
+      question: []
+    need_ta: false
+
+  "clarify:source_context_missing":
+    status: clarification_needed
+    intent: unknown
+    composer: static
+    template: "Bạn muốn tra cứu hoặc so sánh nội dung nào giữa các nguồn vừa nêu? Hãy nêu rõ chủ đề và thông tin ở từng nguồn; chỉ tên nguồn chưa đủ để xác định có mâu thuẫn."
+    interactive_type: none
+    need_ta: false
+
+  "clarify:decision_disagreement":
+    status: clarification_needed
+    intent: unknown
+    composer: static
+    template: "Mình chưa xác định chắc ý bạn muốn tra cứu. Bạn hãy nêu rõ tên bài hoặc thủ tục và thông tin cần kiểm tra."
+    interactive_type: none
+    need_ta: false
+
+  "handoff:no_ground_truth":
+    status: ta_handoff
+    intent_by_subject:
+      lab_unannounced: query_deadline_unannounced
+      event_location: query_event_location_unannounced
+      offline_room_booking: query_offline_room_booking
+    intent: unknown
+    composer: no_ground_truth
+    templates:
+      lab_unannounced: "Kho thông báo chính thức chưa có thời hạn cho bài Lab này. Mình không suy đoán và sẽ chuyển TA xác minh."
+      event_location: "Kho thông báo chính thức chưa có địa điểm phòng thi Hackathon. Mình không suy đoán và sẽ chuyển TA xác minh."
+      offline_room_booking: "Kho thông báo chính thức chưa có quy định về việc đặt phòng họp nhóm. Mình không suy đoán và sẽ chuyển TA xác minh."
+    interactive_type: button_handoff
+    options:
+      - {label: "Chuyển cho TA hỗ trợ", action: "trigger_ta_handoff"}
+    need_ta: true
+    handoff_reason: no_official_ground_truth
+
+  "handoff:conflicting_sources":
+    status: ta_handoff
+    intent_by_subject:
+      daily_standup: resolve_daily_standup_conflict
+      source_conflict: resolve_deadline_conflict
+    intent: resolve_deadline_conflict
+    composer: conflict
+    template: "Mình ghi nhận các nguồn chính thức đang cung cấp thông tin không khớp nên không thể tự chọn một mốc. Bạn hãy gửi link hoặc ảnh chụp của cả email BTC và tin ghim Discord qua /ticket create tại #ticket-support để TA xác minh, rồi theo dõi thông báo đính chính chính thức."
+    interactive_type: button_handoff
+    options:
+      - {label: "Gắn cờ ưu tiên cho TA", action: "trigger_ta_handoff"}
+    need_ta: true
+    handoff_reason: conflicting_sources
+
+  "handoff:unverified_claim":
+    status: ta_handoff
+    intent: unknown
+    composer: static
+    template: "Kho thông báo chính thức chưa đủ dữ kiện để xác nhận hoặc bác bỏ thông tin này. Mình không suy đoán và sẽ chuyển TA xác minh."
+    interactive_type: button_handoff
+    options:
+      - {label: "Chuyển cho TA hỗ trợ", action: "trigger_ta_handoff"}
+    need_ta: true
+    handoff_reason: unverified_claim_no_ground_truth
+
+  "handoff:unsupported":
+    status: ta_handoff
+    intent: unknown
+    composer: static
+    template: "Mình chưa có căn cứ chính thức để trả lời câu này. Bạn có muốn chuyển TA hỗ trợ không?"
+    interactive_type: button_handoff
+    options:
+      - {label: "Chuyển cho TA hỗ trợ", action: "trigger_ta_handoff"}
+    need_ta: true
+    handoff_reason: unsupported_or_no_ground_truth
+
+  "handoff:invalid_source_selection":
+    status: ta_handoff
+    intent: unknown
+    composer: static
+    template: "Quyết định của mô hình không khớp với các nguồn đã truy xuất nên mình không dùng kết quả đó. Mình sẽ chuyển TA xác minh."
+    interactive_type: button_handoff
+    options:
+      - {label: "Chuyển cho TA hỗ trợ", action: "trigger_ta_handoff"}
+    need_ta: true
+    handoff_reason: invalid_source_selection
+
+  "reject:prompt_injection":
+    status: rejected
+    intent: adversarial_prompt_injection
+    composer: static
+    template: "Mình không làm theo chỉ dẫn yêu cầu bỏ qua quy tắc, tiết lộ prompt hoặc thay đổi Ground Truth. Hãy đặt câu hỏi tra cứu dựa trên thông báo chính thức."
+    interactive_type: none
+    need_ta: false
+
+  "answer:field_not_published":
+    status: answered
+    intent_from: source_route
+    intent_by_requested_field:
+      direct_submission_url: query_submission_link
+    composer: field_not_published
+    field_labels:
+      direct_submission_url: "link nộp trực tiếp"
+      submission_platform: "nền tảng nộp bài"
+      late_penalty: "barem trừ điểm"
+    interactive_type: none
+    need_ta: false
+
+  "reject:outside_authority":
+    status: rejected
+    intent_by_subject:
+      prompt_injection: adversarial_prompt_injection
+      fake_admin: adversarial_fake_admin
+      roleplay_authority: adversarial_roleplay_jailbreak
+      personal_submission_status: check_personal_submission_status
+      deadline_extension: request_deadline_extension
+      modify_attendance: request_modify_attendance
+      delete_submission: request_delete_submission
+      phoenix_login: troubleshoot_phoenix_login
+    intent: out_of_scope
+    composer: outside_authority
+    templates:
+      prompt_injection: "Mình không làm theo chỉ dẫn yêu cầu bỏ qua quy tắc hoặc thay đổi Ground Truth. Hãy đặt câu hỏi tra cứu dựa trên thông báo chính thức."
+      fake_admin: "Việc tự nhận là Admin/BTC không cấp quyền thay đổi điểm danh, kết quả học tập hoặc deadline."
+      roleplay_authority: "Mình không thể đóng vai BTC để ban hành hoặc thay đổi deadline và quy định."
+      personal_submission_status: "Mình không có quyền xem trạng thái bài nộp cá nhân. Bạn hãy tự kiểm tra trên VLearn hoặc mở ticket nếu dữ liệu có vấn đề."
+      deadline_extension: "Mình không có thẩm quyền duyệt gia hạn. Bạn hãy dùng /ticket create tại #ticket-support để TA xử lý."
+      modify_attendance: "Mình không có quyền kiểm tra hoặc sửa dữ liệu điểm danh. Bạn hãy liên hệ Lab Coach hoặc mở ticket."
+      delete_submission: "Mình không có quyền xóa hoặc thay đổi bài nộp trên VLearn. Bạn hãy dùng /ticket create tại #ticket-support để TA xử lý."
+      phoenix_login: "Mình không thể can thiệp tài khoản Phoenix. Bạn hãy dùng /ticket create tại #ticket-support để TA xử lý."
+    interactive_type: button_ticket
+    options:
+      - {label: "Mở hướng dẫn /ticket create", action: "show_ticket_help"}
+    need_ta: true
+    handoff_reason: outside_authority
