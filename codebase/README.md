@@ -17,6 +17,9 @@ This repository is a coursework prototype for a grounded Discord logistics assis
 | `../eval/golden_set.json` | Frozen 30-case source backup for historical comparison; not used by the runner or UI. |
 | `../eval/paraphrase_set.json` | 30 unseen wording variants for retrieval/decision generalization checks. |
 | `../eval/run_eval.py` | Evaluation runner; defaults to the sealed `eval_set.json`. |
+| `discord_bot/` | Optional real Discord adapter. Read `discord_bot/README.md`; it calls the Core AI API and never owns grounding logic. |
+| `../eval/golden_set.json` | The backend-owned 30-case evaluation set. |
+| `../eval/run_eval.py` | Canonical full evaluation runner and report writer. |
 
 ## Run locally
 
@@ -32,6 +35,9 @@ In another terminal:
 cd codebase/ui
 npm run dev
 ```
+
+For the Discord demo, install `requirements.txt`, set the Discord variables in a
+local `.env`, then run `python3 -m codebase.discord_bot.bot` in a third terminal.
 
 ## API ownership
 
