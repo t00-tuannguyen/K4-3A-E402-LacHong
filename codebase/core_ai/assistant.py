@@ -45,7 +45,6 @@ SOURCE_BY_ID = {str(source["id"]): source for source in SOURCES}
 SYSTEM_PROMPT = (CONFIG_DIR / "system_prompt.md").read_text(encoding="utf-8")
 
 DEFAULT_MODEL = "gemini-3.5-flash-lite"
-DEFAULT_9ROUTER_MODEL = "cx/deepseek-chat"
 LOGGER = logging.getLogger(__name__)
 
 NORMALIZER = TextNormalizer(CONFIG_DIR / "language_normalization.yaml")
@@ -197,94 +196,6 @@ def _gemini_classification(
     return decision.as_dict()
 
 
-def _9router_classification(
-    message_text: str,
-    retrieval: list[RetrievalResult] | None = None,
-) -> dict[str, Any]:
-    """Ask an OpenAI-compatible endpoint for the same decision contract."""
-    retrieval = retrieval if retrieval is not None else _retrieval_for(message_text)
-    api_key = _first_env("NINEROUTER_API_KEY", "NINE_ROUTER_API_KEY", "OPENAI_API_KEY")
-    base_url = _first_env("NINEROUTER_BASE_URL", "NINE_ROUTER_BASE_URL", "OPENAI_BASE_URL")
-    if not api_key or not base_url:
-        LOGGER.warning("9router_call_skipped reason=missing_api_key_or_base_url")
-        raise RuntimeError("NINEROUTER_API_KEY and NINEROUTER_BASE_URL are required")
-
-    model = _first_env("NINEROUTER_MODEL", "NINE_ROUTER_MODEL", "OPENAI_MODEL") or DEFAULT_9ROUTER_MODEL
-    call_id = uuid.uuid4().hex[:12]
-    started_at = time.perf_counter()
-    endpoint = f"{base_url.rstrip('/')}/chat/completions"
-    payload = {
-        "model": model,
-        "temperature": 0,
-        "messages": [
-            {"role": "system", "content": _decision_instructions(retrieval)},
-            {"role": "user", "content": message_text},
-        ],
-    }
-    request = Request(
-        endpoint,
-        data=json.dumps(payload).encode("utf-8"),
-        method="POST",
-        headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
-    )
-    LOGGER.info(
-        "9router_call_started call_id=%s model=%s top_k=%d timeout_seconds=25",
-        call_id,
-        model,
-        len(retrieval),
-    )
-    try:
-        with urlopen(request, timeout=25) as http_response:
-            status_code = getattr(http_response, "status", 200)
-            body = json.load(http_response)
-    except HTTPError as error:
-        LOGGER.warning(
-            "9router_call_failed call_id=%s model=%s status_code=%s duration_ms=%d error=http_error",
-            call_id,
-            model,
-            error.code,
-            round((time.perf_counter() - started_at) * 1000),
-        )
-        raise RuntimeError(f"9router returned HTTP {error.code}") from error
-    except (URLError, TimeoutError) as error:
-        LOGGER.warning(
-            "9router_call_failed call_id=%s model=%s status_code=unavailable duration_ms=%d error=connection_error",
-            call_id,
-            model,
-            round((time.perf_counter() - started_at) * 1000),
-        )
-        raise RuntimeError("9router connection failed") from error
-    except json.JSONDecodeError as error:
-        LOGGER.warning(
-            "9router_call_failed call_id=%s model=%s status_code=%s duration_ms=%d error=invalid_http_json",
-            call_id,
-            model,
-            status_code,
-            round((time.perf_counter() - started_at) * 1000),
-        )
-        raise RuntimeError("9router returned invalid HTTP JSON") from error
-
-    try:
-        raw_decision = json.loads(body["choices"][0]["message"]["content"])
-        decision = Decision.from_mapping(raw_decision)
-        _validate_source_selection(decision, retrieval)
-    except SourceSelectionError:
-        raise
-    except (IndexError, KeyError, TypeError, json.JSONDecodeError, ValueError) as error:
-        raise RuntimeError("9router returned no valid structured decision") from error
-
-    LOGGER.info(
-        "9router_call_succeeded call_id=%s model=%s status_code=%s duration_ms=%d action=%s reason_code=%s",
-        call_id,
-        model,
-        status_code,
-        round((time.perf_counter() - started_at) * 1000),
-        decision.action,
-        decision.reason_code,
-    )
-    return decision.as_dict()
-
-
 def _selected_retrieval_confidence(
     decision: Decision,
     retrieval: list[RetrievalResult],
@@ -320,9 +231,7 @@ def _llm_decision(
     retrieval: list[RetrievalResult],
 ) -> tuple[Decision, str]:
     provider = os.getenv("LLM_PROVIDER", "gemini").lower()
-    if provider in {"9router", "openai_compatible"}:
-        payload = _9router_classification(message, retrieval)
-    elif provider == "gemini":
+    if provider == "gemini":
         payload = _gemini_classification(message, retrieval)
     else:
         raise RuntimeError(f"Unsupported LLM_PROVIDER: {provider}")
