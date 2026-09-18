@@ -9,7 +9,10 @@ import discord
 
 from .links import source_jump_url
 
-QuestionHandler = Callable[[discord.Interaction, str], Awaitable[None]]
+QuestionHandler = Callable[
+    [discord.Interaction, str, discord.Message | None],
+    Awaitable[None],
+]
 
 
 def _status_color(response: dict[str, Any]) -> int:
@@ -49,17 +52,26 @@ class ResponseView(discord.ui.View):
             elif action == "trigger_ta_handoff":
                 self.add_item(HandoffButton(handoff_handler, question, response, source_message=source_message))
             elif interactive.get("type") == "chips":
-                self.add_item(ClarificationButton(on_question, index, option.get("label", value), value))
+                self.add_item(
+                    ClarificationButton(
+                        on_question,
+                        index,
+                        option.get("label", value),
+                        value,
+                        source_message=source_message,
+                    )
+                )
 
 
 class ClarificationButton(discord.ui.Button):
-    def __init__(self, handler: QuestionHandler, index: int, label: str, value: str):
+    def __init__(self, handler: QuestionHandler, index: int, label: str, value: str, *, source_message: discord.Message | None = None):
         super().__init__(label=f"{index} · {label}"[:80], style=discord.ButtonStyle.secondary, custom_id=f"clarify:{value[:80]}")
         self.handler = handler
         self.value = value
+        self.source_message = source_message
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        await self.handler(interaction, self.value)
+        await self.handler(interaction, self.value, self.source_message)
 
 
 class HandoffButton(discord.ui.Button):

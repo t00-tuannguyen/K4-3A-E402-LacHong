@@ -15,9 +15,33 @@ class DiscordAssistant:
     def __init__(self, config: BotConfig):
         self.config = config
 
+    @staticmethod
+    async def _send_response(
+        interaction: discord.Interaction,
+        content: str,
+        *,
+        source_message: discord.Message | None = None,
+        view: discord.ui.View | None = None,
+        ephemeral: bool = False,
+    ) -> None:
+        """Reply to mention messages while preserving slash-command behavior."""
+        if source_message is not None:
+            await source_message.reply(
+                content=content,
+                view=view,
+                mention_author=False,
+            )
+            return
+        await interaction.followup.send(content=content, view=view, ephemeral=ephemeral)
+
     async def answer_to_interaction(self, interaction: discord.Interaction, question: str, *, source_message: discord.Message | None = None) -> None:
         if not question.strip():
-            await interaction.followup.send("Bạn hãy nhập câu hỏi sau `/ask`.", ephemeral=True)
+            await self._send_response(
+                interaction,
+                "Bạn hãy nhập câu hỏi sau `/ask`.",
+                source_message=source_message,
+                ephemeral=True,
+            )
             return
         try:
             response = await assist(
@@ -36,19 +60,42 @@ class DiscordAssistant:
                 source_message=source_message,
             )
             reply_text = str(response.get("reply_text", ""))
-            await interaction.followup.send(content=reply_text, view=view)
+            await self._send_response(
+                interaction,
+                reply_text,
+                source_message=source_message,
+                view=view,
+            )
         except RuntimeError as error:
-            await interaction.followup.send(f"Mình chưa kết nối được Core AI: {error}", ephemeral=True)
+            await self._send_response(
+                interaction,
+                f"Mình chưa kết nối được Core AI: {error}",
+                source_message=source_message,
+                ephemeral=True,
+            )
 
-    async def answer_followup(self, interaction: discord.Interaction, question: str) -> None:
+    async def answer_followup(
+        self,
+        interaction: discord.Interaction,
+        question: str,
+        source_message: discord.Message | None = None,
+    ) -> None:
         if not interaction.response.is_done():
             await interaction.response.defer()
         channel = interaction.channel
         if channel is not None:
             async with channel.typing():
-                await self.answer_to_interaction(interaction, question)
+                await self.answer_to_interaction(
+                    interaction,
+                    question,
+                    source_message=source_message,
+                )
         else:
-            await self.answer_to_interaction(interaction, question)
+            await self.answer_to_interaction(
+                interaction,
+                question,
+                source_message=source_message,
+            )
 
     async def create_handoff(self, interaction: discord.Interaction, question: str, response: dict[str, Any], *, source_message: discord.Message | None = None) -> None:
         if not interaction.response.is_done():

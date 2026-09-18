@@ -67,7 +67,7 @@ class _MentionInteraction:
     def __init__(self, message: discord.Message):
         self.user = message.author
         self.channel = message.channel
-        self.followup = _MessageFollowup(message.channel)
+        self.followup = _MessageFollowup(message)
         self.response = _DoneResponse()
 
 
@@ -77,11 +77,16 @@ class _DoneResponse:
 
 
 class _MessageFollowup:
-    def __init__(self, channel: discord.abc.Messageable):
-        self.channel = channel
+    def __init__(self, message: discord.Message):
+        self.message = message
 
     async def send(self, content: str | None = None, *, embed: discord.Embed | None = None, view: discord.ui.View | None = None, ephemeral: bool = False) -> discord.Message:
-        return await self.channel.send(content=content, embed=embed, view=view)
+        return await self.message.reply(
+            content=content,
+            embed=embed,
+            view=view,
+            mention_author=False,
+        )
 
 
 if __name__ == "__main__":
