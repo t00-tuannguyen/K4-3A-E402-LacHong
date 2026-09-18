@@ -12,6 +12,7 @@ This repository is a coursework prototype for a grounded Discord logistics assis
 | `core_ai/server.py` | FastAPI HTTP adapter: `/health`, `/api/assist`, `/api/sources`, `/api/evaluation/cases`. |
 | `data/official_announcements.json` | Public, mock official announcement archive used for citations. |
 | `ui/` | React/Vite Discord-style client. Read `ui/README.md` before changing UI behavior. |
+| `discord_bot/` | Optional real Discord adapter. Read `discord_bot/README.md`; it calls the Core AI API and never owns grounding logic. |
 | `../eval/golden_set.json` | The backend-owned 30-case evaluation set. |
 | `../eval/run_eval.py` | Canonical full evaluation runner and report writer. |
 
@@ -29,6 +30,9 @@ In another terminal:
 cd codebase/ui
 npm run dev
 ```
+
+For the Discord demo, install `requirements.txt`, set the Discord variables in a
+local `.env`, then run `python3 -m codebase.discord_bot.bot` in a third terminal.
 
 ## API ownership
 
