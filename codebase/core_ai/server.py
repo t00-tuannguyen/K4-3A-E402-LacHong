@@ -16,11 +16,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from codebase.core_ai.assistant import DEFAULT_9ROUTER_MODEL, DEFAULT_MODEL, RAW_SOURCES, answer
+from codebase.core_ai.assistant import DEFAULT_MODEL, RAW_SOURCES, answer
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-GOLDEN_SET_PATH = PROJECT_ROOT / "eval" / "golden_set.json"
+DEV_SET_PATH = PROJECT_ROOT / "eval" / "dev_set.json"
 load_dotenv(PROJECT_ROOT / ".env")
 
 
@@ -59,11 +59,11 @@ class AssistRequest(BaseModel):
     timestamp: str | None = None
 
 
-def _golden_set_cases() -> list[dict[str, Any]]:
-    """Return the review-safe fields needed by the internal evaluation panel."""
+def _development_set_cases() -> list[dict[str, Any]]:
+    """Return only development cases; the sealed evaluation set stays private."""
     import json
 
-    cases = json.loads(GOLDEN_SET_PATH.read_text(encoding="utf-8"))
+    cases = json.loads(DEV_SET_PATH.read_text(encoding="utf-8"))
     return [
         {
             "case_id": case["case_id"],
@@ -81,17 +81,13 @@ def _golden_set_cases() -> list[dict[str, Any]]:
 @app.get("/health")
 def health() -> dict[str, Any]:
     provider = os.getenv("LLM_PROVIDER", "gemini").lower()
-    nine_router_configured = bool(
-        (os.getenv("NINEROUTER_API_KEY") or os.getenv("NINE_ROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")) and
-        (os.getenv("NINEROUTER_BASE_URL") or os.getenv("NINE_ROUTER_BASE_URL") or os.getenv("OPENAI_BASE_URL"))
-    )
     return {
         "status": "ok",
         "service": "lac-hong-core-ai",
         "llm_provider": provider,
-        "llm_configured": nine_router_configured if provider in {"9router", "openai_compatible"} else bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
+        "llm_configured": bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
         "gemini_configured": bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
-        "model": (os.getenv("NINEROUTER_MODEL") or os.getenv("NINE_ROUTER_MODEL") or os.getenv("OPENAI_MODEL") or DEFAULT_9ROUTER_MODEL) if provider in {"9router", "openai_compatible"} else os.getenv("GEMINI_MODEL", DEFAULT_MODEL),
+        "model": os.getenv("GEMINI_MODEL", DEFAULT_MODEL),
     }
 
 
@@ -123,5 +119,5 @@ def sources() -> dict[str, list[dict[str, Any]]]:
 
 @app.get("/api/evaluation/cases")
 def evaluation_cases() -> dict[str, list[dict[str, Any]]]:
-    """Expose the Golden Set to the local team-only evaluation panel."""
-    return {"cases": _golden_set_cases()}
+    """Expose the development set to the local team-only evaluation panel."""
+    return {"cases": _development_set_cases()}

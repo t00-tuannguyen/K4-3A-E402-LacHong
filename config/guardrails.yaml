@@ -1,0 +1,104 @@
+version: 1
+
+# Các luật này chạy trước retrieval và trước LLM. Thứ tự được quyết định bởi
+# priority, không phụ thuộc thứ tự if/else trong mã Python.
+rules:
+  - id: fake_admin
+    priority: 120
+    match:
+      any_terms: ["tôi là admin", "toi la admin", "admin btc"]
+    decision:
+      action: reject
+      source_ids: []
+      subject: fake_admin
+      reason_code: outside_authority
+      missing_slot: null
+
+  - id: roleplay_authority
+    priority: 125
+    match:
+      any_terms: ["đóng vai", "dong vai", "nhập vai", "nhap vai", "hãy giả làm", "hay gia lam", "giả lập quản trị viên", "gia lap quan tri vien"]
+    decision:
+      action: reject
+      source_ids: []
+      subject: roleplay_authority
+      reason_code: outside_authority
+      missing_slot: null
+
+  - id: prompt_injection
+    priority: 110
+    match:
+      regex_any:
+        - "\\b(?:bo qua|quen)\\s+(?:(?:tat ca|moi|toan bo)\\s+(?:chi thi|chi dan|quy tac|huong dan|lenh)|(?:chi thi|chi dan|quy tac|huong dan|lenh)\\s+(?:truoc(?:\\s+do)?|he thong|cua ban))\\b"
+        - "\\b(?:ignore|disregard|forget)\\s+(?:(?:all|the)\\s+)?(?:previous|prior)\\s+(?:instructions|rules)\\b"
+        - "\\b(?:tiet lo|hien thi|show|reveal)\\s+(?:system\\s+)?prompt\\b"
+        - "\\b(?:bo|huy|vo hieu hoa|tat|disable|bypass)\\s+(?:(?:tat ca|moi|toan bo|cac|nhung)\\s+)?(?:policy|quy tac|rules?|chi thi|chi dan|he thong)\\b"
+    decision:
+      action: reject
+      source_ids: []
+      subject: prompt_injection
+      reason_code: prompt_injection
+      missing_slot: null
+
+  - id: delete_submission
+    priority: 100
+    match:
+      all_groups:
+        - ["xoá", "xóa", "xoa", "delete"]
+        - ["bài nộp", "bai nop", "vlearn"]
+    decision:
+      action: reject
+      source_ids: ["ANN_04"]
+      subject: delete_submission
+      reason_code: outside_authority
+      missing_slot: null
+
+  - id: modify_attendance
+    priority: 95
+    match:
+      all_groups:
+        - ["điểm danh", "diem danh"]
+        - ["check", "sửa", "sua", "ghi nhận", "ghi nhan", "hộ em", "ho em", "giúp em", "giup em", "giùm em", "gium em", "kiểm tra", "kiem tra", "xem lại", "xem lai", "cập nhật", "cap nhat", "bổ sung", "bo sung", "cộng lại", "cong lai", "cộng", "cong"]
+    decision:
+      action: reject
+      source_ids: ["ANN_02"]
+      subject: modify_attendance
+      reason_code: outside_authority
+      missing_slot: null
+
+  - id: personal_submission_status
+    priority: 90
+    match:
+      any_terms: ["đã nộp", "da nop", "check xem", "check hộ", "check ho", "xem hộ", "xem ho", "trạng thái nộp", "trang thai nop", "nộp chưa", "nop chua", "nộp được chưa", "nop duoc chua", "xem bài nộp", "xem bai nop", "lịch sử upload", "lich su upload", "lịch sử nộp", "lich su nop"]
+    decision:
+      action: reject
+      source_ids: []
+      subject: personal_submission_status
+      reason_code: outside_authority
+      missing_slot: null
+
+  - id: deadline_extension
+    priority: 85
+    match:
+      all_groups:
+        - ["gia hạn", "gia han", "extend", "submit thêm", "submit them", "thêm thời gian", "them thoi gian", "kéo dài hạn", "keo dai han"]
+        - ["cho em", "cho tôi", "cho toi", "xin", "có được", "co duoc", "có thể", "co the", "có cách", "co cach", "làm sao", "lam sao", "giúp em", "giup em"]
+    decision:
+      action: reject
+      source_ids: ["ANN_06"]
+      subject: deadline_extension
+      reason_code: outside_authority
+      missing_slot: null
+
+  - id: phoenix_account_access
+    priority: 80
+    match:
+      all_groups:
+        - ["phoenix"]
+        - ["chưa vào", "chua vao", "không vào", "khong vao", "lỗi", "loi", "đăng nhập", "dang nhap", "truy cập", "truy cap", "không truy cập", "khong truy cap"]
+    decision:
+      action: reject
+      source_ids: ["ANN_06"]
+      subject: phoenix_login
+      reason_code: outside_authority
+      missing_slot: null

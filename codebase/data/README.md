@@ -7,7 +7,7 @@ File [`official_announcements.json`](./official_announcements.json) là **kho th
 ### Lý do xuất hiện trong thư mục `codebase/data/`:
 1. **Phục vụ cơ chế Strict Grounding cho Người 3 (Core AI & Prompt Engineer):**
    - Đề bài Track B1 và nguyên tắc thiết kế trong `SPEC.md §4` yêu cầu: *AI chỉ được phép trả lời dựa trên các thông báo chính thức đã được ghim, tuyệt đối không được tự suy đoán ngày giờ (Zero Hallucination).*
-   - Người 3 cần tập fixtures này để nhúng trực tiếp vào Context / System Prompt của Gemini 3.5 Flash-Lite nhằm nhận diện thực thể; backend vẫn là lớp duy nhất được phép lấy dữ kiện và citation để trả lời.
+   - Backend lập chỉ mục tập fixtures này, truy xuất top-k bằng BM25 trên chữ bỏ dấu kết hợp vector đặc trưng, rồi chỉ gửi các nguồn top-k vào context quyết định của Gemini. Toàn bộ kho không bị nhúng vào mọi prompt; backend vẫn là lớp duy nhất được phép lấy dữ kiện và citation để trả lời.
 2. **Phục vụ cơ chế hiển thị trích dẫn nguồn cho Người 4 (Prototype UI Lead):**
    - Theo nguyên tắc **HAX G2** (Làm rõ hệ thống làm tốt đến đâu), bot phải hiển thị kèm khối Embed trích dẫn: Tên kênh (`#thong-bao-chung`, `#thong-bao-lop-hoc`), Mã tin nhắn nguồn (`M49744`, `M16114`, `M47011`...), và mốc thời gian đăng.
    - Giao diện chat mock của Người 4 cần nạp file này để render thông tin dẫn chứng chính xác khi người dùng click xem nguồn.
@@ -23,7 +23,7 @@ File [`official_announcements.json`](./official_announcements.json) là **kho th
 {
   "id": "ANN_04",
   "title": "Thông báo chuẩn bị và hạn nộp Lab 02 CVAT",
-  "source_channel": "#thong-bao-lớp-học",
+  "source_channel": "#thong-bao-lop-hoc",
   "source_msg_id": "M16114",
   "posted_at": "2026-09-13 11:21",
   "author": "BTC",
@@ -37,3 +37,6 @@ File [`official_announcements.json`](./official_announcements.json) là **kho th
 }
 ```
 
+## Audit retrieval metadata
+
+`retrieval_terms_audit.json` phân loại từng `retrieval_terms` và `subject_terms` theo bằng chứng nguồn. Xem `RETRIEVAL_TERMS_AUDIT.md` trước khi thêm hoặc giữ một term không xuất hiện trong thông báo BTC; metadata không phải Ground Truth và không được dùng để tạo fact trong reply.

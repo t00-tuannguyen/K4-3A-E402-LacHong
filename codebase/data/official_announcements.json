@@ -11,7 +11,20 @@
       "deadline": "21:00 13/09/2026",
       "platform": "Phoenix (phoenix.note.transformerlabs.ai)",
       "scope": "Ghép đội tự do & Onboarding"
-    }
+    },
+    "retrieval_terms": ["onboarding", "onboard", "ghép đội", "ghép nhóm", "tìm đồng đội", "thành lập team", "lập team", "chung team", "khác lớp lab", "không đủ người", "giải tán", "team tự do"],
+    "subject_terms": ["onboarding", "onboard", "ghép đội", "ghép nhóm", "tìm đồng đội", "thành lập team", "lập team", "team tự do", "chung team", "khác lớp", "lập nhóm"],
+    "claim_coverage": ["deadline", "team_formation_policy"],
+    "field_availability": {
+      "deadline": {"state": "known", "response": "Thời hạn hoàn thành onboarding và ghép đội tự do trên Phoenix là 21:00 ngày 13/09/2026."},
+      "team_formation_policy": {"state": "known", "response": "Sau thời hạn, hệ thống sẽ tự động ghép đội ngẫu nhiên."},
+      "cross_class_team_policy": {"state": "unknown"}
+    },
+    "default_route": {"intent": "query_deadline_team_formation", "subject": "team_formation"},
+    "routing_rules": [
+      {"any_terms": ["khác lớp", "chung team", "chung đội"], "intent": "query_cross_class_team_policy", "reply_prefix": "Thông báo hiện chỉ xác nhận quy trình và hạn ghép đội trên Phoenix; chưa nêu rõ việc ghép team khác lớp. "},
+      {"any_terms": ["không đủ", "giải tán", "tự động ghép", "đủ 4 người"], "intent": "query_team_formation_policy"}
+    ]
   },
   {
     "id": "ANN_02",
@@ -25,12 +38,23 @@
       "format": "Mã Nhóm - Họ và tên - 5 số cuối mã sinh viên",
       "example": "T001 - Nguyen Van A - 12345",
       "scope": "Cú pháp tên hiển thị"
-    }
+    },
+    "retrieval_terms": ["đổi tên", "tên discord", "nickname discord", "display name", "cú pháp", "định dạng tên", "mssv", "mã sinh viên", "điểm danh workshop", "điểm danh ws"],
+    "subject_terms": ["đổi tên", "tên discord", "nickname discord", "display name", "cú pháp", "định dạng tên", "mssv", "mã sinh viên", "điểm danh", "workshop", "ws"],
+    "claim_coverage": ["naming_policy"],
+    "field_availability": {
+      "naming_policy": {"state": "known", "response": "Cú pháp tên hiển thị là: Mã Nhóm - Họ và tên - 5 số cuối mã sinh viên."},
+      "attendance_policy": {"state": "requires_context", "context_slot": "workshop"}
+    },
+    "default_route": {"intent": "query_naming_convention", "subject": "discord_naming"},
+    "routing_rules": [
+      {"any_terms": ["điểm danh", "workshop", " ws"], "intent": "query_attendance_workshop", "action": "clarify", "reason_code": "missing_subject", "missing_slot": "workshop"}
+    ]
   },
   {
     "id": "ANN_03",
     "title": "Thông báo hạn nộp bài tập Lab 01 Codelab",
-    "source_channel": "#thong-bao-lớp-học",
+    "source_channel": "#thong-bao-lop-hoc",
     "source_msg_id": "M57630",
     "posted_at": "2026-09-12 12:51",
     "author": "BTC",
@@ -39,12 +63,25 @@
       "deadline": "23:59 ngày học",
       "platform": "VLearn (vlearn.dev)",
       "scope": "Lab 01 Codelab"
-    }
+    },
+    "retrieval_terms": ["lab 1", "lab01", "lab 01", "lab một", "lab đầu", "codelab", "hạn nộp", "nộp bài"],
+    "subject_terms": ["lab 1", "lab01", "lab 01", "lab một", "lab đầu", "codelab"],
+    "claim_coverage": ["deadline", "submission_location"],
+    "field_availability": {
+      "deadline": {"state": "known", "response": "Hạn nộp Lab 01 Codelab là 23:59 cùng ngày học."},
+      "submission_platform": {"state": "known", "response": "Lab 01 Codelab được nộp trên hệ thống VLearn."},
+      "direct_submission_url": {"state": "not_published"},
+      "late_penalty": {"state": "unknown"}
+    },
+    "default_route": {"intent": "query_deadline_lab1", "subject": "lab_01"},
+    "routing_rules": [
+      {"any_terms": ["nộp ở", "nộp qua", "nộp trên", "cách nộp", "link nộp"], "intent": "query_submission_location"}
+    ]
   },
   {
     "id": "ANN_04",
     "title": "Thông báo chuẩn bị và hạn nộp Lab 02 CVAT",
-    "source_channel": "#thong-bao-lớp-học",
+    "source_channel": "#thong-bao-lop-hoc",
     "source_msg_id": "M16114",
     "posted_at": "2026-09-13 11:21",
     "author": "BTC",
@@ -54,7 +91,22 @@
       "tool": "CVAT",
       "platform": "VLearn (vlearn.dev)",
       "scope": "Lab 02 CVAT"
-    }
+    },
+    "retrieval_terms": ["lab 2", "lab02", "lab 02", "lab hai", "bài cvat", "cvat", "hạn nộp", "đóng cổng", "nộp bài"],
+    "subject_terms": ["lab 2", "lab02", "lab 02", "lab hai", "bài cvat", "cvat"],
+    "claim_coverage": ["deadline", "submission_location", "lab_tool"],
+    "field_availability": {
+      "deadline": {"state": "known", "response": "Hạn nộp Lab 02 CVAT là 23:59 ngày 16/09/2026."},
+      "submission_platform": {"state": "known", "response": "Lab 02 CVAT được nộp trên hệ thống VLearn."},
+      "direct_submission_url": {"state": "not_published"},
+      "lab_tool": {"state": "known", "response": "Lab 02 sử dụng công cụ CVAT."},
+      "late_penalty": {"state": "unknown"}
+    },
+    "default_route": {"intent": "query_deadline_lab2", "subject": "lab_02"},
+    "routing_rules": [
+      {"any_terms": ["nộp ở", "nộp qua", "nộp trên", "cách nộp", "link nộp"], "intent": "query_submission_location"},
+      {"any_terms": ["dùng cvat", "công cụ cvat", "không dùng cvat"], "intent": "query_lab_tool"}
+    ]
   },
   {
     "id": "ANN_05",
@@ -68,7 +120,16 @@
       "deadline_window": "00:00 - 10:00 sáng hàng ngày",
       "late_policy": "Ghi nhận nhưng không +XP",
       "scope": "Daily Standup"
-    }
+    },
+    "retrieval_terms": ["daily standup", "daily report", "báo cáo ngày", "standup", "daily", "10 giờ", "10h", "nộp muộn", "xp"],
+    "subject_terms": ["daily standup", "daily report", "báo cáo ngày", "standup", "daily"],
+    "claim_coverage": ["deadline", "late_policy"],
+    "field_availability": {
+      "deadline": {"state": "known", "response": "Khung giờ nộp Daily Standup là từ 00:00 đến 10:00 sáng hằng ngày."},
+      "late_penalty": {"state": "known", "response": "Nộp Daily Standup sau 10:00 sáng vẫn được ghi nhận nhưng không được cộng điểm thưởng XP."}
+    },
+    "default_route": {"intent": "query_daily_standup_deadline", "subject": "daily_standup"},
+    "routing_rules": []
   },
   {
     "id": "ANN_06",
@@ -82,7 +143,17 @@
       "command": "/ticket create",
       "channel": "#ticket-support",
       "scope": "Hỗ trợ kỹ thuật & thủ tục"
-    }
+    },
+    "retrieval_terms": ["ticket", "giấy tờ", "giấy xác nhận", "thủ tục", "hỗ trợ kỹ thuật", "hỗ trợ", "phoenix", "tài khoản", "xin gia hạn", "nộp muộn"],
+    "subject_terms": ["ticket", "giấy tờ", "giấy xác nhận", "thủ tục", "hỗ trợ kỹ thuật", "hỗ trợ", "phoenix", "tài khoản"],
+    "claim_coverage": ["support_process"],
+    "field_availability": {
+      "support_process": {"state": "known", "response": "Gõ lệnh /ticket create tại kênh #ticket-support để được TA và Mod hỗ trợ."}
+    },
+    "default_route": {"intent": "query_support_channel", "subject": "support"},
+    "routing_rules": [
+      {"all_groups": [["phoenix"], ["đăng nhập", "chưa vào", "không vào", "lỗi"]], "intent": "troubleshoot_phoenix_login"}
+    ]
   },
   {
     "id": "ANN_07",
@@ -96,7 +167,18 @@
       "command_rank": "/rank",
       "command_leaderboard": "/leaderboard users",
       "scope": "Điểm XP & Rank"
-    }
+    },
+    "retrieval_terms": ["điểm cộng onboarding", "điểm xp", "xem xp", "tra cứu xp", "coi rank", "thứ hạng", "xếp hạng cá nhân", "bảng xếp hạng", "leaderboard", "rank", "/rank", "/leaderboard"],
+    "subject_terms": ["điểm xp", "xem xp", "tra cứu xp", "coi rank", "thứ hạng", "xếp hạng cá nhân", "bảng xếp hạng", "leaderboard", "rank", "/rank", "/leaderboard", "điểm cộng onboarding"],
+    "claim_coverage": ["xp_lookup"],
+    "field_availability": {
+      "xp_lookup": {"state": "known", "response": "Dùng /rank để xem XP và Rank cá nhân, hoặc /leaderboard users để xem bảng xếp hạng."},
+      "points_conversion": {"state": "unknown"}
+    },
+    "default_route": {"intent": "query_xp_leaderboard_command", "subject": "xp_lookup"},
+    "routing_rules": [
+      {"any_terms": ["onboarding", "điểm cộng"], "intent": "query_onboarding_points_vs_xp", "reply_prefix": "Thông báo hiện chỉ xác nhận cách tra cứu XP; chưa có căn cứ để kết luận điểm onboarding có quy đổi sang XP hay không. "}
+    ]
   }
 ]
 

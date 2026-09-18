@@ -9,7 +9,6 @@ const categories = [
 ];
 
 beforeEach(() => {
-  vi.stubEnv("VITE_API_MODE", "api");
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
     ok: true,
     json: async () => ({ cases: categories.map((category, index) => ({
@@ -20,7 +19,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
 

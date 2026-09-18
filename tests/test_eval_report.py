@@ -38,6 +38,7 @@ class EvalReportContractTests(unittest.TestCase):
 
     def test_markdown_explicitly_reports_real_counts(self):
         run = dict(self.live_run)
+        run.setdefault("dataset", "legacy")
         run["summary"] = RUN_EVAL._build_summary(run["results"])
         with tempfile.TemporaryDirectory() as temp_dir:
             report_path = Path(temp_dir) / "run_results.md"
@@ -49,6 +50,29 @@ class EvalReportContractTests(unittest.TestCase):
         self.assertIn("## Phân tích lý do 2 lần sai", report)
         self.assertIn("### TC_23", report)
         self.assertIn("### TC_26", report)
+
+    def test_content_accuracy_requires_expected_source_facts_not_only_a_correct_citation(self):
+        case = next(
+            item for item in RUN_EVAL._load_dataset("dev")
+            if item["case_id"] == "TC_11"
+        )
+        correct = {
+            "intent": "query_deadline_lab2",
+            "status": "answered",
+            "reply_text": "Hạn nộp Lab 02 CVAT là 23:59 ngày 16/09/2026.",
+            "source_citation": {"ground_truth_id": "ANN_04"},
+            "handoff_metadata": {"need_ta": False, "reason": None},
+            "processing_metadata": {"intent_provider": "test"},
+        }
+        missing_fact = {**correct, "reply_text": "Mình đã tìm thấy thông báo chính thức."}
+
+        passed = RUN_EVAL._evaluate_case(case, correct)
+        failed = RUN_EVAL._evaluate_case(case, missing_fact)
+
+        self.assertTrue(passed["checks"]["content_accuracy_scored"])
+        self.assertTrue(passed["checks"]["content_accuracy_pass"])
+        self.assertFalse(failed["checks"]["content_accuracy_pass"])
+        self.assertFalse(failed["overall_pass"])
 
 
 if __name__ == "__main__":

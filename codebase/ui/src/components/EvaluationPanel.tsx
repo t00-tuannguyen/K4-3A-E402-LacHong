@@ -18,27 +18,25 @@ function categoryLabel(category: string) {
 }
 
 export function EvaluationPanel({ onSelectCase }: { onSelectCase: (question: string) => void }) {
-  const mode = import.meta.env.VITE_API_MODE ?? "mock";
   const [cases, setCases] = useState<EvaluationCase[]>([]);
   const [category, setCategory] = useState("happy_path");
   const [selectedId, setSelectedId] = useState("");
   const [expanded, setExpanded] = useState(false);
   const [results, setResults] = useState<Record<string, EvaluationResult>>({});
-  const [loading, setLoading] = useState(mode === "api");
+  const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
-  const [error, setError] = useState<string | null>(mode === "mock" ? "Evaluation panel cần API mode để chạy Golden Set thật." : null);
+  const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
 
   useEffect(() => {
-    if (mode === "mock") return;
     void getEvaluationCases()
       .then((loaded) => {
         setCases(loaded);
         setSelectedId(loaded[0]?.case_id ?? "");
       })
-      .catch((caught) => setError(caught instanceof Error ? caught.message : "Không thể tải Golden Set"))
+      .catch((caught) => setError(caught instanceof Error ? caught.message : "Không thể tải Dev Set"))
       .finally(() => setLoading(false));
-  }, [mode]);
+  }, []);
 
   const categories = useMemo(() => [...new Set(cases.map((testCase) => testCase.category))], [cases]);
   const visibleCases = useMemo(() => cases.filter((testCase) => testCase.category === category), [cases, category]);
@@ -82,21 +80,21 @@ export function EvaluationPanel({ onSelectCase }: { onSelectCase: (question: str
     setExpanded(false);
   }
 
-  return <section aria-label="Golden Set evaluation" className="border-t border-[var(--discord-border)] bg-[var(--discord-bg-secondary)] px-4 py-2">
+  return <section aria-label="Development set evaluation" className="border-t border-[var(--discord-border)] bg-[var(--discord-bg-secondary)] px-4 py-2">
     <button type="button" aria-expanded={expanded} onClick={() => setExpanded((current) => !current)} className="flex w-full items-center gap-2 text-left text-xs text-[var(--discord-text-muted)]">
       <FlaskConical size={15} className="text-[var(--discord-brand)]" />
       <span className="font-medium text-[var(--discord-text)]">Evaluation</span>
-      <span>· {cases.length || 30} test cases</span>
+      <span>· {cases.length || 15} test cases</span>
       {resultList.length > 0 && <span className="rounded bg-[var(--discord-bg-tertiary)] px-1.5 py-0.5 text-[10px]">{passed}/{resultList.length} pass</span>}
       <ChevronDown size={15} className={`ml-auto transition-transform ${expanded ? "rotate-180" : ""}`} />
     </button>
 
     {expanded && <div className="mt-3 max-h-72 space-y-3 overflow-y-auto pb-1">
-      <p className="text-[11px] text-[var(--discord-text-faint)]">Chạy qua backend và so với Golden Set; đây là công cụ review của team.</p>
-      {loading && <p className="text-xs text-[var(--discord-text-faint)]">Đang tải Golden Set…</p>}
+      <p className="text-[11px] text-[var(--discord-text-faint)]">Chạy qua backend và so với Dev Set; đây là công cụ review trong quá trình phát triển.</p>
+      {loading && <p className="text-xs text-[var(--discord-text-faint)]">Đang tải Dev Set…</p>}
       {error && <p role="alert" className="rounded border border-red-700 bg-red-950/30 p-2 text-[11px] text-red-200">{error}</p>}
       {!loading && cases.length > 0 && <>
-        <div className="flex flex-wrap gap-1.5" aria-label="Nhóm Golden Set">
+        <div className="flex flex-wrap gap-1.5" aria-label="Nhóm Dev Set">
           {categories.map((item) => <button key={item} type="button" onClick={() => changeCategory(item)} disabled={running} className={`rounded-md px-2 py-1 text-[11px] disabled:opacity-50 ${category === item ? "bg-[var(--discord-brand)] text-white" : "bg-[var(--discord-bg-active)] text-[var(--discord-text-muted)] hover:text-[var(--discord-text)]"}`}>{categoryLabel(item)} · {cases.filter((testCase) => testCase.category === item).length}</button>)}
         </div>
         <label className="block text-[11px] text-[var(--discord-text-faint)]">Test case
@@ -106,7 +104,7 @@ export function EvaluationPanel({ onSelectCase }: { onSelectCase: (question: str
         </label>
         <div className="flex gap-2">
           <button type="button" onClick={selectCaseForChat} disabled={running} className="flex flex-1 items-center justify-center rounded bg-[var(--discord-brand)] px-2 py-2 text-xs font-medium text-white disabled:opacity-50">Đưa vào chat</button>
-          <button type="button" onClick={() => { setResults({}); void runCases(cases); }} disabled={running} className="flex flex-1 items-center justify-center gap-1 rounded bg-[var(--discord-bg-active)] px-2 py-2 text-xs text-[var(--discord-text)] disabled:opacity-50"><RotateCcw size={13} /> Tự chạy cả 30</button>
+          <button type="button" onClick={() => { setResults({}); void runCases(cases); }} disabled={running} className="flex flex-1 items-center justify-center gap-1 rounded bg-[var(--discord-bg-active)] px-2 py-2 text-xs text-[var(--discord-text)] disabled:opacity-50"><RotateCcw size={13} /> Chạy Dev Set (15)</button>
         </div>
         {running && <p role="status" className="text-[11px] text-[var(--discord-text-faint)]">Đang chạy {progress.done}/{progress.total} case…</p>}
         {selectedCase && results[selectedCase.case_id] && <ResultCard result={results[selectedCase.case_id]} />}

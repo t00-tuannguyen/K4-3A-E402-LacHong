@@ -10,7 +10,6 @@ export type AgentTrace = {
 };
 
 export function AgentInspector({ trace }: { trace: AgentTrace }) {
-  const mode = import.meta.env.VITE_API_MODE ?? "mock";
   const steps = [
     ["Nhận diện intent", Boolean(trace.response?.intent)],
     ["Kiểm tra entity", trace.phase === "done"],
@@ -22,7 +21,7 @@ export function AgentInspector({ trace }: { trace: AgentTrace }) {
     <div className="agent-inspector h-full overflow-y-auto p-4">
       <div className="mb-5">
         <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--discord-text-faint)]">Agent runtime</p>
-        <div className="mt-2 flex items-center justify-between text-xs"><span>Mode</span><code className="rounded bg-black/20 px-2 py-1 text-[#00a8fc]">{mode}</code></div>
+        <div className="mt-2 flex items-center justify-between text-xs"><span>Mode</span><code className="rounded bg-black/20 px-2 py-1 text-[#00a8fc]">Core AI API</code></div>
       </div>
 
       <div className="mb-5 space-y-2">

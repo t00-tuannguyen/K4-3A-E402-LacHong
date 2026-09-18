@@ -9,11 +9,13 @@
 | Họ và Tên | Mã Học Viên | Vai trò chính | Phần việc đảm nhiệm trong dự án |
 |---|---|---|---|
 | Nguyễn Tiến Tuân | 2A202602595 | Đội trưởng · Product Owner & Spec Lead | Nộp form cả 5 checkpoint; chủ trì `spec.md` (§1, §2, §3, §8, §9) và bảng Impact; quản lý tiến độ, điều phối nhóm, kết nối TA; tổng hợp và xuất `demo-slides.pdf`; thuyết trình Slide 1, 2, 6 |
-| Trần Phạm Thái Vũ | 2A202602695 | Data & Evaluation Lead | Mining `k4_messages.csv` lấy bằng chứng định lượng + ≥5 quote; taxonomy 4 lớp chỗ khó; golden set ≥20 case (`eval/golden_set.json`) và script đo `eval/run_eval.py`; viết `spec.md` §5, §7; cùng Võ Phú Hãn chạy validation; thuyết trình Slide 4 |
+| Trần Phạm Thái Vũ | 2A202602695 | Data & Evaluation Lead | Mining `k4_messages.csv` lấy bằng chứng định lượng + ≥5 quote; taxonomy 4 lớp chỗ khó; Dev Set + Sealed Eval Set (`eval/`) và script đo `eval/run_eval.py`; viết `spec.md` §5, §7; cùng Võ Phú Hãn chạy validation; thuyết trình Slide 4 |
 | Vũ Duy Điệp | 2A202602703 | Core AI & Prompt Engineer | System prompt Gemini trên Google AI Studio; grounding chặt (chỉ trả lời từ thông báo chính thức đã ghim); phát hiện mâu thuẫn nguồn, output JSON có cấu trúc; tích hợp API AI thật vào backend (`codebase/core_ai/`, `codebase/prompts/`); thuyết trình Slide 3 + demo live |
 | Võ Phú Hãn | 2A202602628 | Prototype UI & Validation Lead | Giao diện chatbot bấm được (`codebase/ui/`); quay video 30s (CP3) và video demo dự phòng (CP5); test với 5 người ngoài nhóm (`validation/`); thiết kế slide 6 trang; thuyết trình Slide 5 |
 
 > Nhóm copy nguyên file README này về repo của mình, rồi điền bảng trên. Cột **Phần việc đảm nhiệm** ghi càng cụ thể càng tốt.
+
+> Quy tắc evaluation của nhóm: **không được sửa rules dựa trên kết quả `eval/eval_set.json`**. Chỉ dùng `eval/dev_set.json` trong quá trình phát triển; xem `eval/README.md` để biết cách chạy và phân bổ case.
 
 - Thời lượng: **47,5 giờ** từ phát đề đến thuyết trình (ca 3A) — LAB 5 (phát đề + build) · LEC 6 (tiếp tục build theo ca) · LAB 6 (vòng thi)
 - Nhóm: **3-4 người** · thi theo phòng (E403 / E402), chia cụm rồi chung kết phòng — xem *Thể thức thi*

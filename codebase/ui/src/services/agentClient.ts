@@ -1,4 +1,3 @@
-import { mockOfficialSources, mockResponseFor } from "../data/mockScenarios";
 import type { AgentRequest, AgentResponse, AgentStatus, EvaluationCase, InteractiveType, OfficialSource } from "../types";
 
 const statuses: AgentStatus[] = ["answered", "clarification_needed", "ta_handoff", "rejected"];
@@ -58,12 +57,6 @@ function apiBaseUrl() {
 }
 
 export async function sendAgentMessage(request: AgentRequest): Promise<AgentResponse> {
-  const mode = import.meta.env.VITE_API_MODE ?? "mock";
-  if (mode === "mock") {
-    await new Promise((resolve) => window.setTimeout(resolve, 450));
-    return mockResponseFor(request.message_text);
-  }
-
   const response = await fetch(`${apiBaseUrl()}/api/assist`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -77,9 +70,6 @@ export async function sendAgentMessage(request: AgentRequest): Promise<AgentResp
 }
 
 export async function getOfficialSources(): Promise<OfficialSource[]> {
-  const mode = import.meta.env.VITE_API_MODE ?? "mock";
-  if (mode === "mock") return mockOfficialSources;
-
   const response = await fetch(`${apiBaseUrl()}/api/sources`);
   if (!response.ok) throw new Error(`Không thể tải nguồn chính thức (HTTP ${response.status})`);
   const payload: unknown = await response.json();
@@ -94,15 +84,12 @@ export async function getOfficialSources(): Promise<OfficialSource[]> {
 }
 
 export async function getEvaluationCases(): Promise<EvaluationCase[]> {
-  const mode = import.meta.env.VITE_API_MODE ?? "mock";
-  if (mode === "mock") throw new Error("Evaluation panel cần API mode để chạy Golden Set thật.");
-
   const response = await fetch(`${apiBaseUrl()}/api/evaluation/cases`);
-  if (!response.ok) throw new Error(`Không thể tải Golden Set (HTTP ${response.status})`);
+  if (!response.ok) throw new Error(`Không thể tải Dev Set (HTTP ${response.status})`);
   const payload: unknown = await response.json();
   const cases = isRecord(payload) ? payload.cases : null;
   if (!Array.isArray(cases) || !cases.every(isEvaluationCase)) {
-    throw new Error("Golden Set không đúng contract");
+    throw new Error("Dev Set không đúng contract");
   }
   return cases;
 }

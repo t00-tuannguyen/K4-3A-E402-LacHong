@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-18",
+  "scope": "Every retrieval_terms and subject_terms occurrence in official_announcements.json.",
+  "historical_evidence": {
+    "baseline_commit": "68395ab",
+    "finding": "The baseline announcement file contained the official content and key entities but no retrieval_terms or subject_terms. The current metadata is uncommitted, so Git cannot prove the original author intent for an individual term.",
+    "rule": "evaluation_motivated_unverified means that the term is not attested by the official source and is aligned with an evaluation/routing scenario. It is a transparent review flag, not a claim about a person's intent."
+  },
+  "provenance_codes": {
+    "source_attested": "The phrase is present in the official title, content, or key_entities.",
+    "source_derived": "A precise paraphrase or abbreviation directly supported by the official source.",
+    "normalization_alias": "A spelling, numbering, English/Vietnamese, or learner-language variant of a source-attested concept.",
+    "evaluation_motivated_unverified": "Not supported by the official source; retained temporarily for transparent review because it targets an evaluation/routing scenario."
+  },
+  "sources": [
+    {
+      "source_id": "ANN_01",
+      "evidence": "M49744 states onboarding, ghép đội tự do, Phoenix, the deadline, and automatic random matching after the deadline.",
+      "fields": {
+        "retrieval_terms": {
+          "source_attested": ["onboarding", "ghép đội"],
+          "source_derived": [],
+          "normalization_alias": ["onboard", "ghép nhóm", "tìm đồng đội", "thành lập team", "lập team", "team tự do"],
+          "evaluation_motivated_unverified": ["chung team", "khác lớp lab", "không đủ người", "giải tán"]
+        },
+        "subject_terms": {
+          "source_attested": ["onboarding", "ghép đội"],
+          "source_derived": [],
+          "normalization_alias": ["onboard", "ghép nhóm", "tìm đồng đội", "thành lập team", "lập team", "team tự do", "lập nhóm"],
+          "evaluation_motivated_unverified": ["chung team", "khác lớp"]
+        }
+      },
+      "review_status": "needs_owner_confirmation"
+    },
+    {
+      "source_id": "ANN_02",
+      "evidence": "M47011 states đổi tên, cú pháp, mã sinh viên, Discord, and điểm danh; it does not mention a specific workshop.",
+      "fields": {
+        "retrieval_terms": {
+          "source_attested": ["đổi tên", "cú pháp", "mã sinh viên"],
+          "source_derived": ["tên discord", "định dạng tên"],
+          "normalization_alias": ["nickname discord", "display name", "mssv"],
+          "evaluation_motivated_unverified": ["điểm danh workshop", "điểm danh ws"]
+        },
+        "subject_terms": {
+          "source_attested": ["đổi tên", "cú pháp", "mã sinh viên", "điểm danh"],
+          "source_derived": ["tên discord", "định dạng tên"],
+          "normalization_alias": ["nickname discord", "display name", "mssv"],
+          "evaluation_motivated_unverified": ["workshop", "ws"]
+        }
+      },
+      "review_status": "needs_owner_confirmation"
+    },
+    {
+      "source_id": "ANN_03",
+      "evidence": "M57630 explicitly states Lab 01, Codelab, hạn nộp, and bài nộp.",
+      "fields": {
+        "retrieval_terms": {
+          "source_attested": ["lab 01", "codelab", "hạn nộp", "nộp bài"],
+          "source_derived": [],
+          "normalization_alias": ["lab 1", "lab01", "lab một", "lab đầu"],
+          "evaluation_motivated_unverified": []
+        },
+        "subject_terms": {
+          "source_attested": ["lab 01", "codelab"],
+          "source_derived": [],
+          "normalization_alias": ["lab 1", "lab01", "lab một", "lab đầu"],
+          "evaluation_motivated_unverified": []
+        }
+      },
+      "review_status": "source_supported"
+    },
+    {
+      "source_id": "ANN_04",
+      "evidence": "M16114 explicitly states Lab 02, CVAT, hạn nộp, and bài nộp; it does not use the phrase đóng cổng.",
+      "fields": {
+        "retrieval_terms": {
+          "source_attested": ["lab 02", "cvat", "hạn nộp", "nộp bài"],
+          "source_derived": ["bài cvat"],
+          "normalization_alias": ["lab 2", "lab02", "lab hai"],
+          "evaluation_motivated_unverified": ["đóng cổng"]
+        },
+        "subject_terms": {
+          "source_attested": ["lab 02", "cvat"],
+          "source_derived": ["bài cvat"],
+          "normalization_alias": ["lab 2", "lab02", "lab hai"],
+          "evaluation_motivated_unverified": []
+        }
+      },
+      "review_status": "needs_owner_confirmation"
+    },
+    {
+      "source_id": "ANN_05",
+      "evidence": "M73469 explicitly states Daily Standup, 10:00, nộp muộn, and XP.",
+      "fields": {
+        "retrieval_terms": {
+          "source_attested": ["daily standup", "standup", "daily", "nộp muộn", "xp"],
+          "source_derived": ["10 giờ", "10h"],
+          "normalization_alias": ["daily report", "báo cáo ngày"],
+          "evaluation_motivated_unverified": []
+        },
+        "subject_terms": {
+          "source_attested": ["daily standup", "standup", "daily"],
+          "source_derived": [],
+          "normalization_alias": ["daily report", "báo cáo ngày"],
+          "evaluation_motivated_unverified": []
+        }
+      },
+      "review_status": "source_supported"
+    },
+    {
+      "source_id": "ANN_06",
+      "evidence": "M49744 explicitly states ticket, giấy tờ, thủ tục, hỗ trợ kỹ thuật, Phoenix, and tài khoản; it does not state a deadline-extension or late-submission policy.",
+      "fields": {
+        "retrieval_terms": {
+          "source_attested": ["ticket", "giấy tờ", "thủ tục", "hỗ trợ kỹ thuật", "hỗ trợ", "phoenix", "tài khoản"],
+          "source_derived": ["giấy xác nhận"],
+          "normalization_alias": [],
+          "evaluation_motivated_unverified": ["xin gia hạn", "nộp muộn"]
+        },
+        "subject_terms": {
+          "source_attested": ["ticket", "giấy tờ", "thủ tục", "hỗ trợ kỹ thuật", "hỗ trợ", "phoenix", "tài khoản"],
+          "source_derived": ["giấy xác nhận"],
+          "normalization_alias": [],
+          "evaluation_motivated_unverified": []
+        }
+      },
+      "review_status": "needs_owner_confirmation"
+    },
+    {
+      "source_id": "ANN_07",
+      "evidence": "M77092 explicitly states điểm XP, tra cứu, Rank, /rank, and /leaderboard users. It does not state a relationship between onboarding points and XP.",
+      "fields": {
+        "retrieval_terms": {
+          "source_attested": ["điểm xp", "tra cứu xp", "thứ hạng", "bảng xếp hạng", "leaderboard", "rank", "/rank", "/leaderboard"],
+          "source_derived": ["xem xp", "xếp hạng cá nhân"],
+          "normalization_alias": ["coi rank"],
+          "evaluation_motivated_unverified": ["điểm cộng onboarding"]
+        },
+        "subject_terms": {
+          "source_attested": ["điểm xp", "tra cứu xp", "thứ hạng", "bảng xếp hạng", "leaderboard", "rank", "/rank", "/leaderboard"],
+          "source_derived": ["xem xp", "xếp hạng cá nhân"],
+          "normalization_alias": ["coi rank"],
+          "evaluation_motivated_unverified": ["điểm cộng onboarding"]
+        }
+      },
+      "review_status": "needs_owner_confirmation"
+    }
+  ]
+}

@@ -1,0 +1,285 @@
+version: 1
+
+retrieval:
+  top_k: 3
+  minimum_score: 0.30
+
+# Rule outcomes below are backed by explicit policy/source coverage.  If a
+# semantic model disagrees, the system preserves the targeted safe outcome
+# (clarify or handoff) instead of falling back to a generic clarification.
+authoritative_reason_codes:
+  - conflicting_sources
+  - missing_subject
+  - missing_specific_policy
+  - no_ground_truth
+  - unverified_claim
+  - field_not_published
+
+# The field is resolved independently of the subject. Adding a new field or
+# wording variant is configuration work, not an application-code branch.
+field_rules:
+  - field: direct_submission_url
+    priority: 100
+    match:
+      any_terms: ["link nộp", "link submit", "xin link", "gửi link", "url nộp", "đường dẫn nộp"]
+  - field: late_penalty
+    priority: 95
+    match:
+      any_terms: ["nộp muộn", "nộp trễ", "sau hạn", "trễ hạn", "trừ bao nhiêu", "trừ điểm", "khấu trừ", "khấu trừ điểm", "mất điểm", "điểm bị trừ", "bị trừ", "bị phạt", "phạt bao nhiêu"]
+  - field: attendance_policy
+    priority: 90
+    match:
+      any_terms: ["điểm danh", "ws", "workshop"]
+  - field: submission_platform
+    priority: 85
+    match:
+      all_groups:
+        - ["nộp", "submit"]
+        - ["ở đâu", "o đâu", "qua", "trên", "cách nộp"]
+  - field: deadline
+    priority: 80
+    match:
+      any_terms: ["hạn", "deadline", "due", "mấy giờ", "ngày nào", "đóng cổng"]
+  - field: naming_policy
+    priority: 70
+    match:
+      any_terms: ["đổi tên", "tên discord", "nickname", "display name", "mssv", "mã sinh viên"]
+  - field: xp_lookup
+    priority: 70
+    match:
+      any_terms: ["/rank", "leaderboard", "xem xp", "tra xp", "coi rank", "xếp hạng"]
+  - field: support_process
+    priority: 70
+    match:
+      any_terms: ["ticket", "hỗ trợ", "giấy tờ", "giấy xác nhận", "phoenix"]
+  - field: cross_class_team_policy
+    priority: 68
+    match:
+      any_terms: ["khác lớp", "khác lab", "liên lớp", "chung team", "chung đội"]
+  - field: team_formation_policy
+    priority: 65
+    match:
+      any_terms: ["ghép đội", "ghép nhóm", "tìm đồng đội", "lập team", "không đủ người", "giải tán"]
+  - field: lab_tool
+    priority: 65
+    match:
+      any_terms: ["cvat", "công cụ"]
+
+official_source_groups:
+  - ["email", "gmail", "mail"]
+  - ["discord", "tin ghim", "thông báo ghim", "kênh thông báo", "#thong-bao-lop-hoc", "#thong-bao-chung"]
+  - ["vlearn"]
+  - ["phoenix"]
+
+rumour_markers:
+  - "nghe bảo"
+  - "nghe nói"
+  - "tin đồn"
+  - "có người bảo"
+  - "mọi người bảo"
+  - "hình như"
+  - "bạn em nói"
+  - "bạn em bảo"
+  - "ai đó bảo"
+  - "ai đó nói"
+  - "người ta bảo"
+  - "người ta nói"
+  - "đồn là"
+  - "đồn rằng"
+
+assumption_markers: ["có phải", "đúng không", "phải không", "tưởng là", "chắc là", "nghe đâu"]
+deadline_change_markers: ["đổi hạn", "đổi deadline", "bị đổi", "thay đổi hạn", "dời hạn", "lùi hạn", "gia hạn", "deadline mới", "được gia hạn"]
+claim_challenge_markers: ["không cần", "không dùng", "không còn", "không phải", "không được", "chẳng cần", "chẳng còn", "thay vì", "đổi thành", "bị xóa", "bị xoá", "bị hủy", "bị huỷ"]
+disagreement_markers: ["mâu thuẫn", "không khớp", "khác nhau", "lệch", "nhưng", "theo giờ nào", "theo nguồn nào"]
+
+claim_types:
+  deadline: ["đổi hạn", "đổi deadline", "bị đổi", "thay đổi hạn", "dời hạn", "lùi hạn", "gia hạn", "deadline mới", "hạn", "deadline", "due", "mấy giờ", "ngày nào"]
+  late_policy: ["nộp muộn", "trừ điểm", "bị phạt", "không bị phạt", "sau 10", "bị xóa", "không được ghi nhận"]
+  cross_class_team_policy: ["khác lớp", "chung team", "chung đội"]
+  points_conversion: ["quy đổi", "đổi thành xp", "tính vào xp", "onboarding xp", "onboarding trên lớp"]
+  attendance_policy: ["điểm danh"]
+  naming_policy: ["đổi tên", "tên discord", "mssv", "mã sinh viên"]
+  xp_lookup: ["/rank", "leaderboard", "xem xp", "tra xp", "lệnh xp", "bảng xếp hạng"]
+  support_process: ["ticket", "#ticket-support", "hỗ trợ", "giấy tờ"]
+  submission_location: ["nộp qua", "nộp trên", "nộp ở", "link nộp"]
+  lab_tool: ["dùng cvat", "công cụ cvat", "không dùng cvat"]
+  team_formation_policy: ["không đủ người", "giải tán", "tự động ghép", "đủ 4 người"]
+
+# Semantic slots are a reusable intermediate representation for the offline
+# fallback. They describe what is being asked, not any individual test phrase.
+# Rules below can therefore route long, abbreviated and indirect questions
+# through the same policy without changing application code.
+semantic_slots:
+  topic:
+    - value: deadline
+      priority: 100
+      match:
+        any_terms: ["hạn nộp", "thời hạn", "đến hạn", "tới hạn", "sắp hết hạn", "hết hạn", "deadline", "due", "mấy giờ", "ngày nào", "đóng cổng"]
+    - value: submission
+      priority: 95
+      match:
+        any_terms: ["nộp bài", "gửi bài", "tải lên", "đưa lên", "upload", "submit", "link nộp", "url nộp", "đường dẫn nộp"]
+    - value: submission
+      priority: 90
+      match:
+        all_groups:
+          - ["nộp", "gửi", "tải", "đưa", "upload", "submit"]
+          - ["hệ thống", "nền tảng", "link", "url", "đường dẫn"]
+    - value: late_policy
+      priority: 94
+      match:
+        all_groups:
+          - ["nộp", "gửi", "tải", "đưa", "upload", "submit", "bài", "lab"]
+          - ["muộn", "trễ", "quá hạn", "sau hạn", "trừ", "khấu trừ", "mất điểm", "phạt"]
+    - value: offline_collaboration
+      priority: 92
+      match:
+        any_terms: ["phòng họp", "không gian làm việc", "họp trực tiếp", "gặp trực tiếp", "mặt đối mặt", "chỗ họp", "book phòng", "đặt phòng"]
+  operation:
+    - value: submission_target
+      priority: 100
+      match:
+        all_groups:
+          - ["nộp", "gửi", "tải", "đưa", "upload", "submit"]
+          - ["ở đâu", "chỗ nào", "qua đâu", "hệ thống nào", "nền tảng nào", "trên đâu"]
+    - value: submission_url
+      priority: 95
+      match:
+        all_groups:
+          - ["link", "url", "đường dẫn"]
+          - ["nộp", "gửi", "upload", "submit"]
+    - value: deadline_lookup
+      priority: 90
+      match:
+        any_terms: ["hạn nộp", "thời hạn", "đến hạn", "tới hạn", "sắp hết hạn", "hết hạn", "deadline", "due", "mấy giờ", "ngày nào", "đóng cổng"]
+    - value: policy_lookup
+      priority: 85
+      match:
+        all_groups:
+          - ["nộp", "gửi", "tải", "đưa", "upload", "submit", "bài", "lab"]
+          - ["muộn", "trễ", "quá hạn", "sau hạn", "trừ", "khấu trừ", "mất điểm", "phạt"]
+
+# Luật fallback chỉ chạy khi API LLM không khả dụng và cũng được dùng để đo
+# mức đồng thuận với quyết định của LLM.
+rules:
+  - id: daily_system_conflict
+    priority: 100
+    match:
+      all_groups:
+        - ["daily standup", "standup"]
+        - ["báo hết hạn", "nói hết hạn", "kêu hết hạn", "ghi hết hạn", "hiện hết hạn", "bot bảo", "bot nói", "bot kêu", "hệ thống báo", "hệ thống nói", "hệ thống kêu", "sao lại báo"]
+      none_features: [rumour]
+    decision:
+      action: handoff
+      reason_code: conflicting_sources
+      subject: daily_standup
+      missing_slot: null
+      source_from_retrieval: true
+
+  - id: explicit_official_conflict
+    priority: 95
+    match:
+      all_features: [explicit_conflict]
+    decision:
+      action: handoff
+      reason_code: conflicting_sources
+      subject: source_conflict
+      missing_slot: null
+      source_from_retrieval: true
+
+  - id: unannounced_lab
+    priority: 90
+    match:
+      regex_any: ["\\blab\\s*0?[4-9]\\b"]
+      any_terms: ["hạn", "deadline", "due", "ngày nào", "mấy giờ"]
+    decision:
+      action: handoff
+      reason_code: no_ground_truth
+      subject: lab_unannounced
+      missing_slot: null
+
+  - id: unannounced_event_location
+    priority: 85
+    match:
+      all_groups:
+        - ["lịch thi", "kỳ thi", "thi cuối", "cuộc thi", "hackathon", "thi đấu", "vòng thi"]
+        - ["phòng", "địa điểm", "ở đâu", "chỗ nào", "tổ chức ở"]
+    decision:
+      action: handoff
+      reason_code: no_ground_truth
+      subject: event_location
+      missing_slot: null
+
+  - id: offline_room_booking
+    priority: 80
+    match:
+      any_slots: {topic: offline_collaboration}
+    decision:
+      action: handoff
+      reason_code: no_ground_truth
+      subject: offline_room_booking
+      missing_slot: null
+
+  - id: missing_late_penalty
+    priority: 75
+    match:
+      all_slots: {topic: late_policy, operation: policy_lookup}
+    decision:
+      action: answer
+      reason_code: missing_specific_policy
+      subject: late_submission_policy
+      missing_slot: null
+
+  - id: source_names_without_claim
+    priority: 70
+    match:
+      all_features: [multiple_sources]
+      none_features: [explicit_conflict, identified_source]
+    decision:
+      action: clarify
+      reason_code: source_context_missing
+      subject: source_comparison
+      missing_slot: comparison_topic
+
+  - id: submission_link_missing_subject
+    priority: 65
+    match:
+      all_slots: {operation: submission_url}
+      none_features: [identified_source]
+    decision:
+      action: clarify
+      reason_code: missing_subject
+      subject: submission
+      missing_slot: submission_link
+
+  - id: submission_place_missing_subject
+    priority: 60
+    match:
+      all_slots: {operation: submission_target}
+      none_features: [identified_source]
+    decision:
+      action: clarify
+      reason_code: missing_subject
+      subject: submission
+      missing_slot: submission_target
+
+  - id: deadline_missing_subject
+    priority: 55
+    match:
+      all_slots: {topic: deadline, operation: deadline_lookup}
+      none_features: [identified_source]
+    decision:
+      action: clarify
+      reason_code: missing_subject
+      subject: deadline
+      missing_slot: assignment
+
+  - id: greeting
+    priority: 10
+    match:
+      regex_any: ["^(xin chao|chao|hello|hi)(\\b|[!. ])"]
+    decision:
+      action: answer
+      reason_code: greeting
+      subject: greeting
+      missing_slot: null
